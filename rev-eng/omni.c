@@ -17,10 +17,7 @@
  */
 
 /*
- * This application mimics the trace results of Calibration.h
- * Depending on node id of device (and maybe other things) this will work or not...
- *
- * In this case 0xffc0 was the host firewire controller and 0xffc1 the PHANTOM Omni device
+ * This application is used to find out how to use/drive the PHANTOM omni
  */
 
 #include <stdio.h>
@@ -158,24 +155,58 @@ void show_data(struct data_read *data)
 
 int main()
 {
-  int phantom_docked = 0; // Used to exit application
+  int i;
+  quadlet_t buf;
 
-  // Initialise Phantom Omni device
-  // Created from traces in libraw1394
+  // Find out which node id the PHANTOM omni has
 
-  // Find out which node id the PHANTOM omni has?
+  /*
+   * When reading at 0x1006000c and 0x10060010 the PHANTOM omnis return
+   * 0x00990b00 and 0x0ed8a683
+   * 00-0B-99 is the vendor id of SensAble, see http://standards.ieee.org/regauth/oui/oui.txt
+   * Other returned value is PHANTOM omni device id?
+   * 
+   * It would be interesting what other PHANTOM devices return...
+   */
+
+  // TODO Use proper FireWire id lookup methods (instead of reading some random address)
+  // TODO Scan all ports for devices
+  // TODO Create a method which returns true if an expected value is read from an address (in order to cleanup this mess)
+
   raw1394handle_t h0 = raw1394_new_handle();
   int ports = raw1394_get_port_info(h0, 0, 0);
   raw1394_destroy_handle(h0);
   raw1394handle_t h1 = raw1394_new_handle_on_port(0);
   int nodes = raw1394_get_nodecount(h1);
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc1, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h1, 0xffc1, 0x10060010, 4, &buf); }
+  int node_id = 0; // Node of PHANTOM omni
+  for(i = 0; i < nodes; i++)
+  {
+    int node = 0xffc0 | i;
+    if(raw1394_read(h1, node, 0x1006000c, 4, &buf) == 0)
+    {
+      // Found PHANTOM omni?
+      if(buf == 0x00990b00)
+      {
+        if(raw1394_read(h1, node, 0x10060010, 4, &buf) == 0)
+        {
+          if(buf == 0x0ed8a683)
+          {
+            // Found PHANTOM omni!
+            node_id = node;
+            break;
+          }
+        }
+      }
+    }
+  }
   raw1394_destroy_handle(h1);
+
+  if(node_id == 0)
+  {
+    printf("No PHANTOM omni found...\n");
+    return 1;
+  }
+  printf("Found PHANTOM omni at node 0x%x\n", node_id);
 
   // Do ... (something?)
   raw1394handle_t h2 = raw1394_new_handle();
@@ -188,9 +219,9 @@ int main()
   raw1394_get_fd(h2);
   raw1394_get_fd(h3);
   int nodes3 = raw1394_get_nodecount(h2);
-  // TODO Remove since we known already that the PHANTOM is at handle 0xffc1
-  { quadlet_t buf = 0; raw1394_read(h4, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h4, 0xffc1, 0x1006000c, 4, &buf); }
+  // TODO Remove since we known already that the PHANTOM is at handle node_id
+  //{ quadlet_t buf = 0; raw1394_read(h4, 0xffc0, 0x1006000c, 4, &buf); }
+  { quadlet_t buf = 0; raw1394_read(h4, node_id, 0x1006000c, 4, &buf); }
   raw1394_destroy_handle(h2);
   raw1394_destroy_handle(h3);
   raw1394_destroy_handle(h4);
@@ -210,44 +241,44 @@ int main()
 
   // Again: 'do ... (something?)' at least it looks similar...
   raw1394_get_nodecount(h11);
-  // TODO Remove since we known already that the PHANTOM is at handle 0xffc1
-  { quadlet_t buf = 0; raw1394_read(h13, 0xffc0, 0x1006000c, 4, &buf); }
-  { quadlet_t buf = 0; raw1394_read(h13, 0xffc1, 0x1006000c, 4, &buf); }
+  // TODO Remove since we known already that the PHANTOM is at handle node_id
+  //{ quadlet_t buf = 0; raw1394_read(h13, 0xffc0, 0x1006000c, 4, &buf); }
+  { quadlet_t buf = 0; raw1394_read(h13, node_id, 0x1006000c, 4, &buf); }
   raw1394handle_t h18 = raw1394_new_handle();
 
 
   // Configure PHANTOM omni
   // TODO Need to find out what is happening/configuring?
-  { unsigned char data = 0x01; raw1394_write(h13, 0xffc1, 0x1000, 1, (quadlet_t*) &data); }
+  { unsigned char data = 0x01; raw1394_write(h13, node_id, 0x1000, 1, (quadlet_t*) &data); }
 //      <- data: 0x01
 
-  { unsigned char data = 0; raw1394_write(h13, 0xffc1, 0x1001, 1, (quadlet_t*) &data); }
+  { unsigned char data = 0; raw1394_write(h13, node_id, 0x1001, 1, (quadlet_t*) &data); }
 //      <- data: 0x00
 
-  { quadlet_t data = 0xf80f0000; raw1394_write(h13, 0xffc1, 0x20010, 4, &data); }
+  { quadlet_t data = 0xf80f0000; raw1394_write(h13, node_id, 0x20010, 4, &data); }
 //      <- data: 0xf80f0000
 
-  { char buffer; raw1394_read(h13, 0xffc1, 0x1001, 1, (quadlet_t*) &buffer); }
+  { char buffer; raw1394_read(h13, node_id, 0x1001, 1, (quadlet_t*) &buffer); }
 //      -> buffer: ??
 
-  { unsigned char data = 0x40; raw1394_write(h13, 0xffc1, 0x1001, 1, (quadlet_t*) &data); }
+  { unsigned char data = 0x40; raw1394_write(h13, node_id, 0x1001, 1, (quadlet_t*) &data); }
 //      <- data: 0x40
 
-  { char buffer = 0x40; raw1394_read(h13, 0xffc1, 0x1001, 1, (quadlet_t*) &buffer); }
+  { char buffer = 0x40; raw1394_read(h13, node_id, 0x1001, 1, (quadlet_t*) &buffer); }
 //      -> buffer: 0x40
 
-  { unsigned char data = 0; raw1394_write(h13, 0xffc1, 0x1001, 1, (quadlet_t*) &data); }
+  { unsigned char data = 0; raw1394_write(h13, node_id, 0x1001, 1, (quadlet_t*) &data); }
 //      <- data: ??
 
   printf("Found PHANTOM Omni.\n\n");
 
-  { char buffer; raw1394_read(h13, 0xffc1, 0x1083, 1, (quadlet_t*) &buffer); }
+  { char buffer; raw1394_read(h13, node_id, 0x1083, 1, (quadlet_t*) &buffer); }
 //      -> buffer: ??
 
-  { char buffer; raw1394_read(h13, 0xffc1, 0x1082, 1, (quadlet_t*) &buffer); }
+  { char buffer; raw1394_read(h13, node_id, 0x1082, 1, (quadlet_t*) &buffer); }
 //      -> buffer: ??
 
-  { unsigned char data = 0x08; raw1394_write(h13, 0xffc1, 0x1087, 1, (quadlet_t*) &data); }
+  { unsigned char data = 0x08; raw1394_write(h13, node_id, 0x1087, 1, (quadlet_t*) &data); }
 //      <- data: 0x08
 
   // Start isochronous receiving
@@ -259,6 +290,7 @@ int main()
   raw1394_iso_xmit_init(h12, 0 /*xmit_handler*/, 1000, 64, 1, 0, 1);
   raw1394_iso_xmit_start(h12, -1, -1);
 
+  int phantom_docked = 0; // Used to exit application
   do
   {
       if(phantom_data.status.docked)
@@ -280,14 +312,14 @@ int main()
         printf("Dock phantom to exit application\n");
   } while(phantom_data.status.docked != 0 || !phantom_docked);
 
-  // 'Deconfigure' PHANTOM omni?
-  { char buffer; raw1394_read(h13, 0xffc1, 0x1083, 1, (quadlet_t*) &buffer); }
+  // Turn off PHANTOM omni?
+  { char buffer; raw1394_read(h13, node_id, 0x1083, 1, (quadlet_t*) &buffer); }
 //      -> buffer: ??
 
-  { char buffer; raw1394_read(h13, 0xffc1, 0x1082, 1, (quadlet_t*) &buffer); }
+  { char buffer; raw1394_read(h13, node_id, 0x1082, 1, (quadlet_t*) &buffer); }
 //      -> buffer: ??
 
-  { unsigned char data; raw1394_write(h13, 0xffc1, 0x1087, 1, (quadlet_t*) &data); }
+  { unsigned char data; raw1394_write(h13, node_id, 0x1087, 1, (quadlet_t*) &data); }
 //      <- data: ??
 
   // Shutdown isochronous transfers
