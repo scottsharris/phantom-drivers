@@ -32,5 +32,6 @@ The Makefile in the minimal-test directory contains a 'test' target. With this t
 The comparison results can be viewed in the file called comparison.diff. When this file is (almost) empty the device should work and return sensible data (device and gimbal angles and status information of the buttons).
 
 After the minimal test was created, the source was (is being) cleaned in the rev-eng (REVerse ENGineering) directory. With this version all configuration, status information and send and received data can be identified.
+While working on the rev-eng version it might be convenient to turn off tracing of libraw1394 (see libraw1394/src/trace.h file) since things should be working and the data structures are shown in the applciation already.
 
 The lib directory should contain working parts of the driver/library.
