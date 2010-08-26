@@ -4,3 +4,4 @@ minimal-test/proprietary
 .log
 .diff
 .swp
+.o

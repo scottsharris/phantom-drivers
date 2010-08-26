@@ -25,6 +25,8 @@
 
 #include "libraw1394/raw1394.h"
 
+#include "probe-node.h"
+
 quadlet_t writebuf[4] = { 0x07ff07ff, 0x53c007ff, 0x00000000, 0x00000000  };
 
 // Taking the average of the gimbal values, results in a more stable screen display
@@ -125,7 +127,7 @@ void show_data(struct data_read *data)
   if (gimbal_avg_count >= GIMBAL_AVG_STEPS)
     gimbal_avg_count = 0;
 
-  // Calcualte gimbal averages
+  // Calculate gimbal averages
   for(i = 0; i < 3; i++)
   {
     tmp[i] = 0;
@@ -180,37 +182,37 @@ int main()
   int i;
   quadlet_t buf;
 
-  // Find out which node id the PHANTOM omni has
-
-  /*
-   * When reading at 0x1006000c and 0x10060010 the PHANTOM omnis return
-   * 0x00990b00 and 0x0ed8a683
-   * 00-0B-99 is the vendor id of SensAble, see http://standards.ieee.org/regauth/oui/oui.txt
-   * Other returned value is PHANTOM omni device id?
-   * 
-   * It would be interesting what other PHANTOM devices return...
-   */
-
-  // TODO Use proper FireWire id lookup methods (instead of reading some random address)
-
+  // Get amount of ports (firewire cards)
   raw1394handle_t h0 = raw1394_new_handle();
   int ports = raw1394_get_port_info(h0, 0, 0);
   raw1394_destroy_handle(h0);
+
+  // Try to find a PHANTOM omni
   int port; // Port on which the PHANTOM omni is found
   int node_id = 0; // Node of PHANTOM omni
   for(port = 0; port < ports && node_id == 0; port++)
   {
+    // Create a handle of the port which gets scanned
     raw1394handle_t scan_handle = raw1394_new_handle_on_port(port);
     int nodes = raw1394_get_nodecount(scan_handle);
     for(i = 0; i < nodes; i++)
     {
-      int node = 0xffc0 | i;
-      if(got_expected_quadlet(scan_handle, node, 0x1006000c, 0x00990b00) && got_expected_quadlet(scan_handle, node, 0x10060010, 0x0ed8a683))
+      int node = (1023<<6) | i; // 1023 is the local bus id
+      struct config_rom_t crom;
+      if(probe_node(scan_handle, node, &crom) == 0 && crom.vendor_id == 0x000b99)
       {
-         // Found PHANTOM omni!
-         node_id = node;
-         port--; // for-loop adds one after every loop, so correct for this
-         break;
+        // Found a SensAble device, check if it is a PHANTOM omni
+
+	// The PHANTOM omni does not seem to support the config rom and uses custom addresses to read the type id?
+	// 0x00990b00 is the vendor id (0x000b99, see http://standards.ieee.org/regauth/oui/oui.txt), with 1 zero-byte padded to it
+	// 0x0ed8a683 is type id of PHANTOM omni? -> need other PHANTOM devices to find out whether this value is different for other devices
+        if(got_expected_quadlet(scan_handle, node, 0x1006000c, 0x00990b00) && got_expected_quadlet(scan_handle, node, 0x10060010, 0x0ed8a683))
+        {
+           // Found PHANTOM omni!
+           node_id = node;
+           port--; // for-loop adds one after every loop, so correct for this
+           break;
+	 }
       }
     }
     raw1394_destroy_handle(scan_handle);

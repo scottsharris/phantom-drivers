@@ -1,12 +1,16 @@
 CFLAGS+=-W -O2 -DNDEBUG -Dlinux
 TARGETS=omni
+FILES_omni=omni probe-node
 
 .PHONY: all
 all: $(TARGETS)
 
-omni: omni.c
-	$(CC) $(CFLAGS) -lraw1394 -o $@ $<
+omni: $(patsubst %,%.o,$(FILES_omni))
+	$(CC) $(CFLAGS) -lraw1394 -o $@ $^
+
+omni.o: probe-node.h
+probe-node.o: probe-node.h
 
 .PHONY: clean
 clean:
-	-rm -f $(TARGETS)
+	-rm -f $(TARGETS) $(patsubst %,%.o,$(FILES_omni))
