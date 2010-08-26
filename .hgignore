@@ -3,3 +3,4 @@ minimal-test/opensource
 minimal-test/proprietary
 .log
 .diff
+.swp
