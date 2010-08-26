@@ -106,10 +106,16 @@ struct data_read {
         unsigned char bit7    : 1;
       };
     } status;
-    short unknown10; // always 0x1007 ??
+    short unknown10; // always 0x1007 -> not always: also have seen 0x0007 
     union gimbal_u gimbal_inv; // seems to be the inverse of gimbal
-    short unknown14; // not part of data?
-    short unknown15; // not part of data?
+    short unknown14; // always 0x5746
+    short unknown15;
+    quadlet_t count0; // msg nr?? since it adds one every received mesasge (even when app is not running)
+    short unknown18;
+    short unknown19;
+    short count1; // Seems to be counting, slower than count0 (half the speed?)
+    short unknown21;
+    // After this: all zeros (not part of data anymore?)
 };
 
 struct data_read phantom_data;
@@ -196,6 +202,8 @@ void show_data(struct data_read *data)
     printf(" %d->%d", i, (force_data.status.bits & (1<<i)) != 0);
   printf("\n");
   printf("\n");
+
+  // TODO In proprietary library it is possible to grab motor temperatures... We might want to add this
 }
 
 void fill_default_data(struct data_write *data)

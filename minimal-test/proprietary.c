@@ -78,12 +78,24 @@ HDCallbackCode DevicePositionCallback(void *pUserData)
 void PrintDevicePosition()
 {
     hduVector3Dd position;
+    HDint numMotors;
+    HDdouble *temps;
+    int i;
 
     hdScheduleSynchronous(DevicePositionCallback, position,
         HD_DEFAULT_SCHEDULER_PRIORITY);
         
     printf("Device position: %.3f %.3f %.3f\n", 
         position[0], position[1], position[2]);
+
+    // TODO Nothing seems to happen when the temperatures are read... (missing TRACEs in libraw1394??)
+    hdGetIntegerv(HD_OUTPUT_DOF, &numMotors);
+    temps = (HDdouble *) malloc(sizeof(HDdouble) * numMotors);
+    hdGetDoublev(HD_MOTOR_TEMPERATURE, temps);
+
+    for(i = 0; i < numMotors; i++)
+      printf("Motor %d temp: %f\n", i, temps[i]);
+    free(temps);
 }
 
 HDCallbackCode ForceFeedbackCallback(void *pUserData)
