@@ -27,7 +27,6 @@
 
 #include "probe-node.h"
 
-quadlet_t writebuf[4] = { 0x07ff07ff, 0x53c007ff, 0x00000000, 0x00000000  };
 
 // Taking the average of the gimbal values, results in a more stable screen display
 // (Might not be necessary for controllers...)
@@ -48,6 +47,38 @@ union gimbal_u {
     unsigned short z_unused:5;
     unsigned short z:11;
   };
+};
+
+/**
+ * Data structure of the data presented when writing to the PHANTOM device
+ */
+struct data_write {
+   short force_x;
+   short force_y;
+   short force_z;
+   union {
+     unsigned short bits;
+     struct {
+       unsigned short dl_flash : 1;  // Dock Light flash (when enabled with dl_fflash, the light is permanently on)
+       unsigned short dl_fflash : 1; // Dock Light Fast flash
+       unsigned short bit2  : 1;
+       unsigned short motors_on : 1; // When set the motors are on (and the given forces are applied)
+       unsigned short bit4  : 1;
+       unsigned short bit5  : 1;
+       unsigned short bit6  : 1;
+       unsigned short bit7  : 1;
+       unsigned short bit8  : 1;
+       unsigned short bit9  : 1;
+       unsigned short bit10 : 1;
+       unsigned short bit11 : 1;
+       unsigned short bit12 : 1;
+       unsigned short bit13 : 1;
+       unsigned short bit14 : 1;
+       unsigned short bit15 : 1;
+     };
+   } status;
+   quadlet_t unused1; // Must be zero
+   quadlet_t unused2; // Must be zero
 };
 
 /**
@@ -82,11 +113,12 @@ struct data_read {
 };
 
 struct data_read phantom_data;
+struct data_write force_data;
 
 enum raw1394_iso_disposition xmit_handler(raw1394handle_t handle, unsigned char *data, unsigned int *len, unsigned char *tag, unsigned char *sy, int cycle, unsigned int dropped)
 {
-  memcpy(data, writebuf, 16);
-  *len = 16;
+  memcpy(data, &force_data, sizeof(force_data));
+  *len = sizeof(force_data);
   *tag = 0;
   *sy = 0;
   return RAW1394_ISO_OK;
@@ -153,6 +185,27 @@ void show_data(struct data_read *data)
     printf("Gimbal docked\n");
   else
     printf("\n");
+
+  printf("\n");
+  printf("Force X: 0x%4.4x\n", force_data.force_x);
+  printf("Force Y: 0x%4.4x\n", force_data.force_y);
+  printf("Force Z: 0x%4.4x\n", force_data.force_z);
+  printf("Status : 0x%4.4x\n", force_data.status.bits);
+  printf("Status bits:");
+  for(i = 0; i < 16; i++)
+    printf(" %d->%d", i, (force_data.status.bits & (1<<i)) != 0);
+  printf("\n");
+  printf("\n");
+}
+
+void fill_default_data(struct data_write *data)
+{
+  data->force_x     = 0x7ff;
+  data->force_y     = 0x7ff;
+  data->force_z     = 0x7ff;
+  data->status.bits = 0x53c0;
+  data->unused1     = 0;
+  data->unused2     = 0;
 }
 
 /**
@@ -180,6 +233,7 @@ int got_expected_quadlet(raw1394handle_t h, nodeaddr_t node, unsigned int addres
 int main()
 {
   int i;
+  fill_default_data(&force_data);
 
   // Get amount of ports (firewire cards)
   raw1394handle_t h0 = raw1394_new_handle();
@@ -292,10 +346,25 @@ int main()
       raw1394_loop_iterate(recv_handle);
 
       // Do an isochronous read
-      raw1394_iso_xmit_write(xmit_handle, (unsigned char *) writebuf, 16, 0, 0);
-      writebuf[1] = 0x53c307ff; // Does not seem to be required??
+      raw1394_iso_xmit_write(xmit_handle, (unsigned char *) &force_data, 16, 0, 0);
 
       show_data(&phantom_data);
+
+      // Add some interaction with the buttons
+      if(phantom_data.status.button1 == 0)
+      {
+        printf("Release button 1 to disable forces\n");
+        force_data.status.motors_on = 1;
+        force_data.force_x = 0x550;
+      }
+      else
+      {
+        printf("Press button 1 to apply force on X axis\n");
+        force_data.status.motors_on = 0;
+      }
+      force_data.status.dl_flash = !phantom_data.status.button1;
+      force_data.status.dl_fflash = !phantom_data.status.button2;
+
       if(!phantom_docked)
         printf("Undock and dock phantom to exit application\n");
       else
