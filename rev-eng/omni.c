@@ -153,6 +153,28 @@ void show_data(struct data_read *data)
     printf("\n");
 }
 
+/**
+ * @return false when expected_response did not match received response (or an error occurred)
+ */
+int got_expected_char(raw1394handle_t h, nodeaddr_t node, unsigned int address, const unsigned char expected_response)
+{
+  unsigned char buf;
+  if(raw1394_read(h, node, address, 1, (quadlet_t *) &buf))
+    return 0;
+  return buf == expected_response;
+}
+
+/**
+ * @return false when expected_response did not match received response (or an error occurred)
+ */
+int got_expected_quadlet(raw1394handle_t h, nodeaddr_t node, unsigned int address, const quadlet_t expected_response)
+{
+  quadlet_t buf;
+  if(raw1394_read(h, node, address, sizeof(quadlet_t), &buf))
+    return 0;
+  return buf == expected_response;
+}
+
 int main()
 {
   int i;
@@ -170,52 +192,42 @@ int main()
    */
 
   // TODO Use proper FireWire id lookup methods (instead of reading some random address)
-  // TODO Scan all ports for devices
-  // TODO Create a method which returns true if an expected value is read from an address (in order to cleanup this mess)
 
   raw1394handle_t h0 = raw1394_new_handle();
   int ports = raw1394_get_port_info(h0, 0, 0);
   raw1394_destroy_handle(h0);
-  raw1394handle_t h1 = raw1394_new_handle_on_port(0);
-  int nodes = raw1394_get_nodecount(h1);
+  int port; // Port on which the PHANTOM omni is found
   int node_id = 0; // Node of PHANTOM omni
-  for(i = 0; i < nodes; i++)
+  for(port = 0; port < ports && node_id == 0; port++)
   {
-    int node = 0xffc0 | i;
-    if(raw1394_read(h1, node, 0x1006000c, 4, &buf) == 0)
+    raw1394handle_t scan_handle = raw1394_new_handle_on_port(port);
+    int nodes = raw1394_get_nodecount(scan_handle);
+    for(i = 0; i < nodes; i++)
     {
-      // Found PHANTOM omni?
-      if(buf == 0x00990b00)
+      int node = 0xffc0 | i;
+      if(got_expected_quadlet(scan_handle, node, 0x1006000c, 0x00990b00) && got_expected_quadlet(scan_handle, node, 0x10060010, 0x0ed8a683))
       {
-        if(raw1394_read(h1, node, 0x10060010, 4, &buf) == 0)
-        {
-          if(buf == 0x0ed8a683)
-          {
-            // Found PHANTOM omni!
-            node_id = node;
-            break;
-          }
-        }
+         // Found PHANTOM omni!
+         node_id = node;
+         port--; // for-loop adds one after every loop, so correct for this
+         break;
       }
     }
+    raw1394_destroy_handle(scan_handle);
   }
-  raw1394_destroy_handle(h1);
 
   if(node_id == 0)
   {
     printf("No PHANTOM omni found...\n");
     return 1;
   }
-  printf("Found PHANTOM omni at node 0x%x\n", node_id);
+  printf("Found PHANTOM omni on port %d, at node 0x%x\n", port, node_id);
 
   // Do ... (something?)
-  raw1394handle_t h2 = raw1394_new_handle();
-  raw1394handle_t h3 = raw1394_new_handle();
-  raw1394handle_t h4 = raw1394_new_handle();
+  raw1394handle_t h2 = raw1394_new_handle_on_port(port);
+  raw1394handle_t h3 = raw1394_new_handle_on_port(port);
+  raw1394handle_t h4 = raw1394_new_handle_on_port(port);
 
-  raw1394_set_port(h2, 0);
-  raw1394_set_port(h3, 0);
-  raw1394_set_port(h4, 0);
   raw1394_get_fd(h2);
   raw1394_get_fd(h3);
   int nodes3 = raw1394_get_nodecount(h2);
@@ -227,14 +239,11 @@ int main()
   raw1394_destroy_handle(h4);
 
   // Create isochronous handles
-  raw1394handle_t h11 = raw1394_new_handle();
-  raw1394handle_t h12 = raw1394_new_handle();
+  raw1394handle_t h11 = raw1394_new_handle_on_port(port);
+  raw1394handle_t h12 = raw1394_new_handle_on_port(port);
   // Create configuration handle
-  raw1394handle_t h13 = raw1394_new_handle();
+  raw1394handle_t h13 = raw1394_new_handle_on_port(port);
 
-  raw1394_set_port(h11, 0);
-  raw1394_set_port(h12, 0);
-  raw1394_set_port(h13, 0);
   // File handles can be used to determine whether data is ready?
   int fd11 = raw1394_get_fd(h11);
   int fd12 = raw1394_get_fd(h12);
