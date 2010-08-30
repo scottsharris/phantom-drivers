@@ -24,8 +24,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <netinet/in.h> // ntohl
 
 #include "libraw1394/raw1394.h"
+#include "libraw1394/csr.h"
 
 #include "probe-node.h"
 
@@ -35,6 +37,11 @@
 #define ADDR_CONTROL               0x1087  /* control register? */
 #define ADDR_CONTROL_enable_iso    (1<<3)  /*   bit 3 enables the isochronous data transfer of the device */
                                            /*   other bits are unknown and always seems to be zero? */
+
+#define CHANNELS_AVAILABLE_ADDR    CSR_REGISTER_BASE + CSR_CHANNELS_AVAILABLE_HI
+
+// Returns true of false depending whether the 'channel bit' is set in channels
+#define CHANNEL_IS_FREE(channels, channel) (channels & (1L<<(63 - channel)))
 
 /**
  * Contains the values of the gimbal. For each axis the 5 most LSB are unused (too erratic)
@@ -129,6 +136,8 @@ struct device_info
   raw1394handle_t xmit_handle;
   int fd_recv;
   int fd_xmit;
+  int recv_channel;
+  int xmit_channel;
 
   struct data_read phantom_data;
   struct data_write force_data;
@@ -379,18 +388,52 @@ int main()
     // Configure PHANTOM omni
     // TODO Need to find out what is happening/configuring?
 
-    // Set isochronous xmit channel
-    // TODO Find out whether the channel is already used or not... (especially when other firewire devices (like a camera...) are present)
-    bufc = device * 2 + 1; raw1394_write(config_handle, node, ADDR_XMIT_CHANNEL, 1, (quadlet_t*) &bufc);
-    // Set isochronous recv channel
-    bufc = device * 2; raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &bufc);
+    // Find free channels for the current port
+    nodeid_t irm_node = raw1394_get_irm_id(config_handle);
+    printf("IRM node = 0x%x\n", irm_node);
+    octlet_t channels;
+    quadlet_t *channelsq = (quadlet_t *) &channels;
+    raw1394_read(config_handle, irm_node, CHANNELS_AVAILABLE_ADDR, sizeof(octlet_t), (quadlet_t *) &channels);
+    // Convert to a more convenient order
+    for(i = 0; i < 2; i++)
+      channelsq[i] = ntohl(channelsq[i]);
+    channels = ((octlet_t )channelsq[0])<<32 | channelsq[1]; // swap quadlets
+    printf("Free channels: 0x%16.16lx\n", channels);
+
+    devices[device].recv_channel = -1;
+    devices[device].xmit_channel = -1;
+    for(i = 0; i < 64; i++)
+      if(CHANNEL_IS_FREE(channels, i))
+      {
+        devices[device].recv_channel = i;
+        i++;
+        break;
+      }
+    for(i; i < 64; i++)
+      if(CHANNEL_IS_FREE(channels, i))
+      {
+        devices[device].xmit_channel = i;
+        break;
+      }
+    printf("recv_channel = %d, xmit_channel = %d\n", devices[device].recv_channel, devices[device].xmit_channel);
+    if(devices[device].recv_channel == -1 || devices[device].xmit_channel == -1)
+    {
+      fprintf(stderr, "No free isochronous channels are present, cannot communicate with PHANTOM device...\n");
+      continue;
+    }
+    raw1394_channel_modify(config_handle, devices[device].recv_channel, RAW1394_MODIFY_ALLOC);
+    raw1394_channel_modify(config_handle, devices[device].xmit_channel, RAW1394_MODIFY_ALLOC);
+
+    // Set isochronous xmit and recv channels
+    bufc = devices[device].xmit_channel; raw1394_write(config_handle, node, ADDR_XMIT_CHANNEL, 1, (quadlet_t*) &bufc);
+    bufc = devices[device].recv_channel; raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &bufc);
 
     // TODO Whithout this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
     //bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
 
-    if(!got_expected_char(config_handle, node, ADDR_RECV_CHANNEL, device * 2, &bufc))
+    if(!got_expected_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel, &bufc))
     {
-      printf("line %d: Expected %x but got 0x%2.2x instead!\n", __LINE__, device * 2, bufc);
+      printf("line %d: Expected %d but got %d instead!\n", __LINE__, devices[device].recv_channel, bufc);
       return 1;
     }
 
@@ -407,7 +450,7 @@ int main()
     bufc = 0x40; raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &bufc);
     if(!got_expected_char(config_handle, node, ADDR_RECV_CHANNEL, 0x40, &bufc))
     {
-      printf("line %d: Expected 0x40 but got 0x%2.2x insead!\n", __LINE__, bufc);
+      printf("line %d: Expected 0x40 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
@@ -420,13 +463,13 @@ int main()
     // TODO What is this doing? (also called after leaving the main loop)
     if(!got_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
     {
-      printf("line %d: Expected 0xc0 but got 0x%2.2x insead!\n", __LINE__, bufc);
+      printf("line %d: Expected 0xc0 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
     if(!got_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
     {
-      printf("line %d: Expected 0x00 but got 0x%2.2x insead!\n", __LINE__, bufc);
+      printf("line %d: Expected 0x00 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
@@ -437,11 +480,11 @@ int main()
     raw1394_write(config_handle, node, ADDR_CONTROL, 1, (quadlet_t*) &bufc);
 
     // Start isochronous receiving
-    raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, device * 2, -1, 1);
+    raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, devices[device].recv_channel, -1, 1);
     raw1394_iso_recv_start(devices[device].recv_handle, -1, -1, 0);
 
     // Start isochronous transmitting
-    raw1394_iso_xmit_init(devices[device].xmit_handle, xmit_handler, 1000, 64, device * 2 + 1, 0, 1);
+    raw1394_iso_xmit_init(devices[device].xmit_handle, xmit_handler, 1000, 64, devices[device].xmit_channel, RAW1394_ISO_SPEED_100, 1);
     raw1394_iso_xmit_start(devices[device].xmit_handle, -1, -1);
   }
 
@@ -491,7 +534,7 @@ int main()
               printf("Something went wrong in the recv iterate loop... errno (%d) -> ", errno); fflush(stdout);
               perror(0);
               return 1;
- 	    }
+             }
           }
 
           // Add some interaction with the buttons
@@ -523,13 +566,13 @@ int main()
     // TODO What is this doing (also called before entering the main loop)
     if(!got_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
     {
-      printf("line %d: Expected 0xc0 but got 0x%2.2x insead!\n", __LINE__, bufc);
+      printf("line %d: Expected 0xc0 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
     if(!got_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
     {
-      printf("line %d: Expected 0x00 but got 0x%2.2x insead!\n", __LINE__, bufc);
+      printf("line %d: Expected 0x00 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
@@ -541,6 +584,12 @@ int main()
     // Shutdown isochronous transfers
     raw1394_iso_shutdown(devices[device].xmit_handle);
     raw1394_iso_shutdown(devices[device].recv_handle);
+
+    if(devices[device].recv_channel != -1 && devices[device].xmit_channel != -1)
+    {
+      raw1394_channel_modify(devices[device].config_handle, devices[device].recv_channel, RAW1394_MODIFY_FREE);
+      raw1394_channel_modify(devices[device].config_handle, devices[device].xmit_channel, RAW1394_MODIFY_FREE);
+    }
 
     raw1394_destroy_handle(devices[device].recv_handle);
     raw1394_destroy_handle(devices[device].xmit_handle);
