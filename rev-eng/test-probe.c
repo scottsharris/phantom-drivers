@@ -17,7 +17,10 @@
  */
 
 /**
- * This application tests probe-node.c */
+ * This application tests probe-node.c 
+ */
+
+#include <stdio.h>
 
 #include "probe-node.h"
 
@@ -35,8 +38,11 @@ int main()
   int port;
   if(ports > 1)
   {
-      printf("Which port do you want to select?");
-      port = 0; // Select port here
+      do
+      {
+        printf("Which port do you want to select (0-%d):", ports - 1);
+        int ignore = scanf("%d", &port);
+      } while(port >= ports);
   }
   else
   {
@@ -50,7 +56,8 @@ int main()
     printf("Failed to read number of nodes...\n");
     return 1;
   }
-  printf("Found %d nodes:\n", nodes);
+  printf("\n\n");
+  printf("Found %d nodes on port %d:\n", nodes, port);
   
   int i;
   nodeaddr_t node;
@@ -60,10 +67,11 @@ int main()
       node = (1023<<6) | i; // 1023 is the local bus id
       if(probe_node(scan_handle, node, &crom) == 0)
       {
-          printf("Node 0x%x:\n", node);
-	  printf("Vendor id: 0x%8.8x %s\n", crom.vendor_id, crom.vendor);
-	  printf("Model id: 0x%x\n", crom.model_id);
-	  printf("\n\n");
+        printf("Node 0x%x:\n", (unsigned int) node);
+        printf("Vendor     : %s (0x%8.8x)\n", crom.vendor, crom.vendor_id);
+        printf("GUID       : 0x%16.16lx\n", crom.guid);
+        printf("Link speed : %s\n", crom.link_speed == 0 ? "S100" : crom.link_speed == 1 ? "S200" : crom.link_speed == 2 ? "S400" : "unknown");
+        printf("\n\n");
       }
   }
 
