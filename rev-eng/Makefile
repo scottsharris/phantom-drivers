@@ -8,6 +8,9 @@ all: $(TARGETS)
 omni: $(patsubst %,%.o,$(FILES_omni))
 	$(CC) $(CFLAGS) -lraw1394 -o $@ $^
 
+test-probe: test-probe.c probe-node.c
+	$(CC) $(CFLAGS) -lraw1394 -o $@ $^
+
 omni.o: probe-node.h
 probe-node.o: probe-node.h
 
