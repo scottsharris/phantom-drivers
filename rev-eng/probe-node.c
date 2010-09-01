@@ -38,8 +38,7 @@ int read_config_rom(raw1394handle_t handle, unsigned node, unsigned int cr_offse
 
 	if (raw1394_read(handle, phy_id, offset, length * 4, buffer) < 0)
 	{
-		fprintf(stderr,"node %d: error reading %d quadlets config ROM offset 0x%x\n", node, length, cr_offset);
-		fprintf(stderr,"  %s\n",strerror(errno));
+		fprintf(stderr,"node 0x%x: error reading %d quadlets config ROM offset 0x%x\n  (%d) %s", node, length, cr_offset, errno, strerror(errno));
 		return 1;
 	}
 	return 0;
@@ -65,7 +64,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 	/* Read the length of the bus info block */
 	if (read_config_rom_quadlet(handle,node,offset,&quadlet) < 0)
 		return 1;
-//  	fprintf(stderr,"node %d: Bus info block length: %d\n", node, quadlet>>24);
+//  	fprintf(stderr,"node 0x%x: Bus info block length: %d\n", node, quadlet>>24);
 
 	/* If the length isn't 4 it means the node doesn't have a general ROM
 	 * format and instead contains only a 24 bit vendor ID.
@@ -83,7 +82,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 	}
 	crom->magic_num = quadlet;
 	if (quadlet != 0x31333934) {
-		fprintf(stderr,"node %d: wrong config ROM magic number 0x%08x\n", node, quadlet);
+		fprintf(stderr,"node 0x%x: wrong config ROM magic number 0x%08x\n", node, quadlet);
     		return 1;
 	}
 
@@ -125,7 +124,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 	len = quadlet >> 16;
 	if (len > 16)
 	{
-		fprintf(stderr,"node %d: unexpected large root dir length %d set to 16\n", node, len);
+		fprintf(stderr,"node 0x%x: unexpected large root dir length %d set to 16\n", node, len);
 		len = 16;
 	}
 
@@ -144,7 +143,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 			case 0x0c: crom->node_capabilities = value; break;
 			case 0x03:
 				if (value != crom->vendor_id)
-					fprintf(stderr,"node %d: vendor ID mismatch: 0x%06x (bus info block) vs 0x%06x (root dir)\n", node, crom->vendor_id, value);
+					fprintf(stderr,"node 0x%x: vendor ID mismatch: 0x%06x (bus info block) vs 0x%06x (root dir)\n", node, crom->vendor_id, value);
 		                 break;
 			case 0xd1: unit_dir_offset = offset+value*4; break;
 			case 0x8d: 
@@ -154,7 +153,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 				 */
 				break;
 			case 0x81: textual_leaf_offset = offset+value*4; break;
-			default: fprintf(stderr,"node %d: unknown root dir key 0x%02x seen\n",node, quadlet >> 24);
+			default: fprintf(stderr,"node 0x%x: unknown root dir key 0x%02x seen\n",node, quadlet >> 24);
 		}
 	}
 
@@ -168,7 +167,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 		if (read_config_rom_quadlet(handle,node,offset,&quadlet) < 0) 
 			return 1;
 		len = quadlet >> 16;
-//		fprintf(stderr,"node %d: unit directory length is %d quadlets\n",node,len);
+//		fprintf(stderr,"node 0x%x: unit directory length is %d quadlets\n",node,len);
 
 		for(i = 0; i < len; i++)
 		{
@@ -193,7 +192,7 @@ int probe_node(raw1394handle_t handle, int node, struct config_rom_t *crom)
 		if (read_config_rom_quadlet(handle,node,offset,&quadlet) < 0) 
 			return 1;
 		len = quadlet >> 16;
-//		fprintf(stderr,"node %d: textual leaf length is %d quadlets\n",node,len);
+//		fprintf(stderr,"node 0x%x: textual leaf length is %d quadlets\n",node,len);
 	
 // Unused?(always 0)
 // Encoding for vendor text?
