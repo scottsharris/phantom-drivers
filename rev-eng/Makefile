@@ -1,6 +1,6 @@
 CFLAGS+=-W -O2 -DNDEBUG -Dlinux
 TARGETS=omni
-FILES_omni=omni probe-node
+FILES_omni=omni probe-node easy-com
 
 .PHONY: all
 all: $(TARGETS)

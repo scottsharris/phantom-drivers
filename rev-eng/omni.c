@@ -30,6 +30,7 @@
 #include "libraw1394/csr.h"
 
 #include "probe-node.h"
+#include "easy-com.h"
 
 // List of addresses which can be used to configure the PHANTOM device
 #define ADDR_XMIT_CHANNEL          0x1000  /* sets the xmit isochronous channel */
@@ -147,6 +148,8 @@ struct device_info
 struct device_info devices[MAX_DEVICES];
 unsigned int found_devices = 0;
 
+int initialise_device(unsigned int device, int full_init);
+
 enum raw1394_iso_disposition xmit_handler(raw1394handle_t handle, unsigned char *data, unsigned int *len, unsigned char *tag, unsigned char *sy, int cycle, unsigned int dropped)
 {
   unsigned int device;
@@ -166,7 +169,6 @@ enum raw1394_iso_disposition xmit_handler(raw1394handle_t handle, unsigned char 
   return RAW1394_ISO_OK;
 }
 
-
 enum raw1394_iso_disposition recv_handler(raw1394handle_t handle, unsigned char *data, unsigned int len, unsigned char channel, unsigned char tag, unsigned char sy, unsigned int cycle, unsigned int dropped)
 {
   unsigned int device;
@@ -179,10 +181,29 @@ enum raw1394_iso_disposition recv_handler(raw1394handle_t handle, unsigned char 
       return 1;
   }
 
-
   memcpy(&devices[device].phantom_data, data, sizeof(struct data_read));
 
   return RAW1394_ISO_OK;
+}
+
+int busreset_handler(raw1394handle_t handle, unsigned int generation)
+{
+  unsigned int device;
+
+  printf("Bus reset!\n");
+  raw1394_update_generation(handle, generation);
+  for(device = 0; device < found_devices; device++)
+  {
+    if(devices[device].recv_handle == handle)
+    {
+      printf("Device %d need to re-initialise\n", device);
+      printf("fd_xmit: %d, fd_recv: %d\n", devices[device].fd_xmit, devices[device].fd_recv);
+      if(initialise_device(device, 0))
+        fprintf(stderr, "initialise_device(%d, 0) failed\n", device);
+      printf("fd_xmit: %d, fd_recv: %d\n", devices[device].fd_xmit, devices[device].fd_recv);
+      break;
+    }
+  }
 }
 
 void show_data(unsigned int device)
@@ -244,6 +265,7 @@ void show_data(unsigned int device)
 
    if(device == 0)
    {
+     printf("Press button2 to perform a 'bus reset'\n");
      if(devices[device].phantom_data.status.docked == 0)
         printf("Undock and dock phantom to exit application\n");
      else
@@ -259,26 +281,6 @@ void fill_default_data(struct data_write *data)
   data->status.bits = 0x53c0;
   data->unused1     = 0;
   data->unused2     = 0;
-}
-
-/**
- * @return false when expected_response did not match received response (or an error occurred)
- */
-int got_expected_char(raw1394handle_t h, nodeaddr_t node, unsigned int address, const unsigned char expected_response, unsigned char *buf)
-{
-  if(raw1394_read(h, node, address, 1, (quadlet_t *) buf))
-    return 0;
-  return *buf == expected_response;
-}
-
-/**
- * @return false when expected_response did not match received response (or an error occurred)
- */
-int got_expected_quadlet(raw1394handle_t h, nodeaddr_t node, unsigned int address, const quadlet_t expected_response, quadlet_t *buf)
-{
-  if(raw1394_read(h, node, address, sizeof(quadlet_t), buf))
-    return 0;
-  return *buf == expected_response;
 }
 
 /**
@@ -306,10 +308,166 @@ int set_fd_blocking(int fd, int block)
   return 0;
 }
 
+int initialise_device(unsigned int device, int full_init)
+{
+  unsigned char bufc;
+  int i;
+  int node = devices[device].node;
+  int port = devices[device].port;
+
+  if(full_init)
+  {
+    // Create isochronous handles
+    devices[device].recv_handle = raw1394_new_handle_on_port(port);
+    devices[device].xmit_handle = raw1394_new_handle_on_port(port);
+    // Create configuration handle
+    devices[device].config_handle = raw1394_new_handle_on_port(port);
+
+    // Only add 1 handle to bus reset event, sicne the other (xmit) handle is updated at teh same time!
+    raw1394_set_bus_reset_handler(devices[device].recv_handle, &busreset_handler);
+
+    // File handles can be used to determine whether data is ready?
+    devices[device].fd_recv = raw1394_get_fd(devices[device].recv_handle);
+    devices[device].fd_xmit = raw1394_get_fd(devices[device].xmit_handle);
+
+    // Does not seem to influence anything (enabling/disabling O_NONBLOCK)
+    if(set_fd_blocking(devices[device].fd_recv, 0) || set_fd_blocking(devices[device].fd_xmit, 0))
+      return 1;
+  }
+
+  raw1394handle_t config_handle = devices[device].config_handle;
+  // Configure PHANTOM omni
+
+  // Find free channels for the current port
+  nodeid_t irm_node = raw1394_get_irm_id(config_handle);
+  printf("IRM node = 0x%x\n", irm_node);
+  octlet_t channels;
+  quadlet_t *channelsq = (quadlet_t *) &channels;
+  if(read_data(config_handle, irm_node, CHANNELS_AVAILABLE_ADDR, sizeof(octlet_t), (unsigned char *) &channels))
+  {
+    fprintf(stderr, "Failed to read free channels: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+  // Convert to a more convenient order
+  for(i = 0; i < 2; i++)
+    channelsq[i] = ntohl(channelsq[i]);
+  channels = ((octlet_t )channelsq[0])<<32 | channelsq[1]; // swap quadlets
+  printf("Free channels: 0x%16.16lx\n", channels);
+
+  devices[device].recv_channel = -1;
+  devices[device].xmit_channel = -1;
+  for(i = 0; i < 64; i++)
+    if(CHANNEL_IS_FREE(channels, i))
+    {
+      devices[device].recv_channel = i;
+      break;
+    }
+  for(i++; i < 64; i++)
+    if(CHANNEL_IS_FREE(channels, i))
+    {
+      devices[device].xmit_channel = i;
+      break;
+    }
+  if(devices[device].recv_channel == -1 || devices[device].xmit_channel == -1)
+  {
+    fprintf(stderr, "No free isochronous channels are present, cannot communicate with PHANTOM device...\n");
+    return 1;
+  }
+  printf("recv_channel = %d, xmit_channel = %d\n", devices[device].recv_channel, devices[device].xmit_channel);
+
+  // TODO Need to find out what is happening/configuring?
+  // Allocate/claim channels for out application
+  raw1394_channel_modify(config_handle, devices[device].recv_channel, RAW1394_MODIFY_ALLOC);
+  raw1394_channel_modify(config_handle, devices[device].xmit_channel, RAW1394_MODIFY_ALLOC);
+
+  // Set isochronous xmit and recv channels
+  if(write_data_char(config_handle, node, ADDR_XMIT_CHANNEL, devices[device].xmit_channel))
+  {
+    fprintf(stderr, "Failed to write xmit channel info: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+  if(write_data_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel))
+  {
+    fprintf(stderr, "Failed to write xmit channel info: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+
+  // TODO Whithout this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
+  //bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
+
+  if(get_expected_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel, &bufc))
+  {
+    printf("line %d: Expected %d but got %d instead!\n", __LINE__, devices[device].recv_channel, bufc);
+    return 1;
+  }
+
+  // Toggle bit 6 and see whether we can read it -> test to check whether device is working?
+  // Especially since the proprietary library prints the 'Found PHANTOM Omni' message afterwards
+
+  // Change value and see whether we can read it back
+  if(write_data_char(config_handle, node, ADDR_RECV_CHANNEL, 0x40))
+  {
+    fprintf(stderr, "Failed to write test (?) data..\n");
+    return 1;
+  }
+  if(get_expected_char(config_handle, node, ADDR_RECV_CHANNEL, 0x40, &bufc))
+  {
+    fprintf(stderr, "line %d: Expected 0x40 but got 0x%2.2x instead!\n", __LINE__, bufc);
+    return 1;
+  }
+
+  // Write back our selected channel
+  if(write_data_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel))
+  {
+    fprintf(stderr, "Failed to write back our selected channel: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+
+  // TODO What is this doing? (also called after leaving the main loop)
+  if(get_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
+  {
+    fprintf(stderr, "line %d: Expected 0xc0 but got 0x%2.2x instead!\n", __LINE__, bufc);
+    return 1;
+  }
+
+  if(get_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
+  {
+    fprintf(stderr, "line %d: Expected 0x00 but got 0x%2.2x instead!\n", __LINE__, bufc);
+    return 1;
+  }
+
+  // Enable isochronous transfer
+  // TODO Does other bits have any effect?
+  if(read_data_char(config_handle, node, ADDR_CONTROL, &bufc))
+  {
+    fprintf(stderr, "Failed read ADDR_CONTROL: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+  bufc |=  ADDR_CONTROL_enable_iso;
+  if(write_data_char(config_handle, node, ADDR_CONTROL, bufc))
+  {
+    fprintf(stderr, "Failed to write ADDR_CONTROL: (%d) %s\n", errno, strerror(errno));
+    return 1;
+  }
+
+  // Start isochronous receiving
+  raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, devices[device].recv_channel, -1, 1);
+  raw1394_iso_recv_start(devices[device].recv_handle, -1, -1, 0);
+
+  // Start isochronous transmitting
+  raw1394_iso_xmit_init(devices[device].xmit_handle, xmit_handler, 1000, 64, devices[device].xmit_channel, RAW1394_ISO_SPEED_100, 1);
+  raw1394_iso_xmit_start(devices[device].xmit_handle, -1, -1);
+
+  printf("initialise_device() ok\n\n");
+
+  return 0;
+}
+
 int main()
 {
   int error_quit = 0; // When 1 exit application, since something went wrong...
   int phantom_docked = 0; // Used to exit application
+  int button2_pressed = 0; // Used to create a 'click' event (instead of a hold)
   int i;
   unsigned int device; // Used for iterations
   quadlet_t bufq;
@@ -319,6 +477,11 @@ int main()
   raw1394handle_t h0 = raw1394_new_handle();
   int ports = raw1394_get_port_info(h0, 0, 0);
   raw1394_destroy_handle(h0);
+  if(ports == 0)
+  {
+    printf("No firewire ports found... Did you forgot to start the raw1394 module? (again...)\n");
+    return 0;
+  }
 
   // Try to find a PHANTOM device -> currently there is no detection for the PHANTOME device type
   int port;
@@ -334,13 +497,13 @@ int main()
       if(probe_node(scan_handle, node, &crom) == 0 && crom.vendor_id == 0x000b99)
       {
         // Found a SensAble device
-      
+ 
         // TODO Check if it is a PHANTOM omni
 
         // The PHANTOM omni does not seem to support the config rom and uses custom addresses to read the type id?
         // 0x00990b00 is the vendor id (0x000b99, see http://standards.ieee.org/regauth/oui/oui.txt), with 1 zero-byte padded to it
         // 0x0ed8a683 is serial of PHANTOM device -> need to find out how to get type id
-        if(got_expected_quadlet(scan_handle, node, 0x1006000c, 0x00990b00, &bufq)/* && got_expected_quadlet(scan_handle, node, 0x10060010, 0x0ed8a683)*/)
+        if(!get_expected_quadlet(scan_handle, node, 0x1006000c, 0x00990b00, &bufq)/* && !get_expected_quadlet(scan_handle, node, 0x10060010, 0x0ed8a683)*/)
         {
            // Found PHANTOM device!
            devices[found_devices].port = port;
@@ -355,7 +518,7 @@ int main()
 
   if(found_devices == 0)
   {
-    printf("No PHANTOM device found...\n");
+    printf("No PHANTOM devices found...\n");
     return 1;
   }
   printf("Found %d PHANTOM device(s):\n", found_devices);
@@ -364,136 +527,13 @@ int main()
 
   // Setup each device
   for(device = 0; device < found_devices; device++)
-  {
-    int node = devices[device].node;
-    int port = devices[device].port;
-    // Create isochronous handles
-    devices[device].recv_handle = raw1394_new_handle_on_port(port);
-    devices[device].xmit_handle = raw1394_new_handle_on_port(port);
-    // Create configuration handle
-    devices[device].config_handle = raw1394_new_handle_on_port(port);
-
-    // File handles can be used to determine whether data is ready?
-    devices[device].fd_recv = raw1394_get_fd(devices[device].recv_handle);
-    devices[device].fd_xmit = raw1394_get_fd(devices[device].xmit_handle);
-
-    // Does not seem to influence anything (enabling/disabling O_NONBLOCK)
-    if(set_fd_blocking(devices[device].fd_recv, 0))
+    if(initialise_device(device, 1))
       return 1;
-    if(set_fd_blocking(devices[device].fd_xmit, 0))
-      return 1;
-
-
-    raw1394handle_t config_handle = devices[device].config_handle;
-    // Configure PHANTOM omni
-    // TODO Need to find out what is happening/configuring?
-
-    // Find free channels for the current port
-    nodeid_t irm_node = raw1394_get_irm_id(config_handle);
-    printf("IRM node = 0x%x\n", irm_node);
-    octlet_t channels;
-    quadlet_t *channelsq = (quadlet_t *) &channels;
-    raw1394_read(config_handle, irm_node, CHANNELS_AVAILABLE_ADDR, sizeof(octlet_t), (quadlet_t *) &channels);
-    // Convert to a more convenient order
-    for(i = 0; i < 2; i++)
-      channelsq[i] = ntohl(channelsq[i]);
-    channels = ((octlet_t )channelsq[0])<<32 | channelsq[1]; // swap quadlets
-    printf("Free channels: 0x%16.16lx\n", channels);
-
-    devices[device].recv_channel = -1;
-    devices[device].xmit_channel = -1;
-    for(i = 0; i < 64; i++)
-      if(CHANNEL_IS_FREE(channels, i))
-      {
-        devices[device].recv_channel = i;
-        i++;
-        break;
-      }
-    for(i; i < 64; i++)
-      if(CHANNEL_IS_FREE(channels, i))
-      {
-        devices[device].xmit_channel = i;
-        break;
-      }
-    printf("recv_channel = %d, xmit_channel = %d\n", devices[device].recv_channel, devices[device].xmit_channel);
-    if(devices[device].recv_channel == -1 || devices[device].xmit_channel == -1)
-    {
-      fprintf(stderr, "No free isochronous channels are present, cannot communicate with PHANTOM device...\n");
-      continue;
-    }
-    raw1394_channel_modify(config_handle, devices[device].recv_channel, RAW1394_MODIFY_ALLOC);
-    raw1394_channel_modify(config_handle, devices[device].xmit_channel, RAW1394_MODIFY_ALLOC);
-
-    // Set isochronous xmit and recv channels
-    bufc = devices[device].xmit_channel; raw1394_write(config_handle, node, ADDR_XMIT_CHANNEL, 1, (quadlet_t*) &bufc);
-    bufc = devices[device].recv_channel; raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &bufc);
-
-    // TODO Whithout this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
-    //bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
-
-    if(!got_expected_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel, &bufc))
-    {
-      printf("line %d: Expected %d but got %d instead!\n", __LINE__, devices[device].recv_channel, bufc);
-      return 1;
-    }
-
-
-
-    // Toggle bit 6 and see whether we can read it -> test to check whether device is working?
-    // Especially since the proprietary library prints the 'Found PHANTOM Omni' message afterwards
-
-    // Read value, since we'd like to keep our selected channel!
-    unsigned char old_value;
-    raw1394_read(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t *) &old_value);
-
-    // Change value and see whether we can read it back
-    bufc = 0x40; raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &bufc);
-    if(!got_expected_char(config_handle, node, ADDR_RECV_CHANNEL, 0x40, &bufc))
-    {
-      printf("line %d: Expected 0x40 but got 0x%2.2x instead!\n", __LINE__, bufc);
-      return 1;
-    }
-
-    // Write back our selected channel
-    raw1394_write(config_handle, node, ADDR_RECV_CHANNEL, 1, (quadlet_t*) &old_value);
-
-
-
-
-    // TODO What is this doing? (also called after leaving the main loop)
-    if(!got_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
-    {
-      printf("line %d: Expected 0xc0 but got 0x%2.2x instead!\n", __LINE__, bufc);
-      return 1;
-    }
-
-    if(!got_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
-    {
-      printf("line %d: Expected 0x00 but got 0x%2.2x instead!\n", __LINE__, bufc);
-      return 1;
-    }
-
-    // Enable isochronous transfer
-    // TODO Does other bits have any effect?
-    raw1394_read(config_handle, node, ADDR_CONTROL, 1, (quadlet_t*) &bufc);
-    bufc |=  ADDR_CONTROL_enable_iso;
-    raw1394_write(config_handle, node, ADDR_CONTROL, 1, (quadlet_t*) &bufc);
-
-    // Start isochronous receiving
-    raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, devices[device].recv_channel, -1, 1);
-    raw1394_iso_recv_start(devices[device].recv_handle, -1, -1, 0);
-
-    // Start isochronous transmitting
-    raw1394_iso_xmit_init(devices[device].xmit_handle, xmit_handler, 1000, 64, devices[device].xmit_channel, RAW1394_ISO_SPEED_100, 1);
-    raw1394_iso_xmit_start(devices[device].xmit_handle, -1, -1);
-  }
 
   do
   {
       if(devices[0].phantom_data.status.docked)
         phantom_docked = 1;
-
-      printf("\n\033[2J"); // Clear screen
 
       // It is also possible to use this contraction when writing
       // (this application writes when there was something to read)
@@ -516,9 +556,11 @@ int main()
       {
         printf("select() timed out, which means there was no communciation for 1 second...\n");
         printf("Connection got lost?\n");
-        printf("Exiting...");
-        error_quit = 1;
+        printf("Exiting... (no need to cleanup stuff since we do not have the connection anymore...)\n\n");
+        return 0;
       }
+
+      printf("\n\033[2J"); // Clear screen
 
       // Now update the devices which have data available according to select()
       for(device = 0; device < found_devices; device++)
@@ -529,7 +571,7 @@ int main()
           // Do an isochronous read
           if(raw1394_loop_iterate(devices[device].recv_handle))
           {
-            if(errno != EAGAIN)
+            if(errno != 0 && errno != EAGAIN)
             {
               printf("Something went wrong in the recv iterate loop... errno (%d) -> ", errno); fflush(stdout);
               perror(0);
@@ -542,10 +584,28 @@ int main()
           devices[device].force_data.status.dl_flash = !devices[device].phantom_data.status.button1;
           devices[device].force_data.status.dl_fflash = !devices[device].phantom_data.status.button2;
 
+          if(device == 0)
+          {
+            if(devices[0].phantom_data.status.button2 == 0)
+            {
+              button2_pressed = 1;
+            }
+            else
+            {
+              if(button2_pressed)
+              {
+                // Button2 (of device 0) got released
+                button2_pressed = 0;
+                // Reset bus on which device 0 is connected (to test whether the bus reset handler is functioning)
+                raw1394_reset_bus(devices[0].config_handle);
+              }
+            }
+          }
+
           // Do an isochronous write
           if(raw1394_loop_iterate(devices[device].xmit_handle))
           {
-            if(errno != EAGAIN)
+            if(errno != 0 && errno != EAGAIN)
             {
               printf("Something went wrong in the xmit iterate loop... errno (%d) -> ", errno); fflush(stdout);
               perror(0);
@@ -564,13 +624,13 @@ int main()
     raw1394handle_t config_handle = devices[device].config_handle;
 
     // TODO What is this doing (also called before entering the main loop)
-    if(!got_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
+    if(get_expected_char(config_handle, node, 0x1083, 0xc0, &bufc)) // -> bufc: 0xc0 = bit 6 & 7
     {
       printf("line %d: Expected 0xc0 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
     }
 
-    if(!got_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
+    if(get_expected_char(config_handle, node, 0x1082, 0x00, &bufc))
     {
       printf("line %d: Expected 0x00 but got 0x%2.2x instead!\n", __LINE__, bufc);
       return 1;
