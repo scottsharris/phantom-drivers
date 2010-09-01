@@ -1,6 +1,6 @@
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/dispatch.c ./src/dispatch.c
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/dispatch.c	2009-06-22 06:22:25.000000000 +0200
-+++ ./src/dispatch.c	2010-08-25 09:47:52.000000000 +0200
++++ ./src/dispatch.c	2010-09-01 10:08:04.000000000 +0200
 @@ -17,6 +17,8 @@
  #include "raw1394_private.h"
  #include "fw.h"
@@ -63,13 +63,12 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/dispatch.c ./src/dispatch
  	free(handle);
  }
  
-@@ -72,15 +86,21 @@
- 	ieee1394handle_t ieee1394_handle;
+@@ -73,14 +87,20 @@
  	fw_handle_t fw_handle;
  	raw1394handle_t handle;
-+  
-+	TRACE1("raw1394_new_handle_on_port(%d)", port);
  
++	TRACE1("raw1394_new_handle_on_port(%d)", port);
++
  	handle = (raw1394handle_t) malloc(sizeof(struct raw1394_handle));
  	if (!handle)
 +  {
@@ -166,7 +165,7 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/dispatch.c ./src/dispatch
  		return 0xFFFF;
  	}
 +
-+  nodeid_t ret;
++	nodeid_t ret;
  	if (handle->is_fw)
 -		return fw_get_irm_id(handle->mode.fw);
 +		ret = fw_get_irm_id(handle->mode.fw);
@@ -1129,21 +1128,334 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/dispatch.c ./src/dispatch
 +	TRACEret1("%d", ret);
 +	return ret;
  }
-diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/fw.c ./src/fw.c
---- /home/bzr/Downloads/libraw1394-2.0.5/src/fw.c	2009-12-26 17:01:39.000000000 +0100
-+++ ./src/fw.c	2010-08-25 12:46:41.000000000 +0200
-@@ -418,7 +418,7 @@
- 	fw_handle_t handle;
- 	struct epoll_event ep;
- 	int i;
--
-+  
- 	memset(&ep, 0, sizeof(ep));
+diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c ./src/eventloop.c
+--- /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c	2009-01-30 06:11:05.000000000 +0100
++++ ./src/eventloop.c	2010-09-01 10:08:40.000000000 +0200
+@@ -27,17 +27,27 @@
+ #include "kernel-raw1394.h"
+ #include "raw1394_private.h"
  
- 	handle = malloc(sizeof *handle);
++#include "trace.h"
++
+ 
+ int ieee1394_loop_iterate(struct raw1394_handle *handle)
+ {
+         struct raw1394_request req;
+         ieee1394handle_t ihandle = handle->mode.ieee1394;
+         int retval = 0;
++#ifdef TRACELOOP
++        TRACEh("ieee1394_loop_iterate(h = %d)", handle); fflush(stdout);
++#endif
+ 
+         while (read(ihandle->fd, &req, sizeof(req)) < 0) {
+-                if (errno != EINTR) return -1;
++                if (errno != EINTR)
++		{
++#ifdef TRACELOOP
++			TRACEret1("read failed: errno = %d", errno);
++#endif
++			return -1;
++		}
+         }
+-
+         switch (req.type) {
+         case RAW1394_REQ_BUS_RESET:
+                 if (ihandle->protocol_version == 3) {
+@@ -88,7 +98,9 @@
+                 }
+                 break;
+         }
+-
++#ifdef TRACELOOP
++	TRACEret1("retval = %d\n", retval);
++#endif
+         return retval;
+ }
+ 
+@@ -96,6 +108,7 @@
+ bus_reset_handler_t raw1394_set_bus_reset_handler(struct raw1394_handle *handle,
+                                                   bus_reset_handler_t new)
+ {
++	TRACEh("raw1394_set_bus_reset_handler(h = %d, new)", handle);
+ 	bus_reset_handler_t old;
+ 	if (!handle) {
+ 		errno = EINVAL;
+@@ -109,6 +122,7 @@
+ 		old = handle->mode.ieee1394->bus_reset_handler;
+ 		handle->mode.ieee1394->bus_reset_handler = new;
+ 	}
++	TRACEret("old_handle");
+ 	return old;
+ }
+ 
+@@ -147,12 +161,14 @@
+ 		old = handle->mode.ieee1394->arm_tag_handler;
+ 		handle->mode.ieee1394->arm_tag_handler = new;
+ 	}
++	TRACEret("old_handle");
+ 	return old;
+ }
+ 
+ fcp_handler_t raw1394_set_fcp_handler(struct raw1394_handle *handle,
+                                       fcp_handler_t new)
+ {
++	TRACEh("raw1394_set_fcp_handler(h = %d, new)", handle);
+ 	fcp_handler_t old;
+ 	if (!handle) {
+ 		errno = EINVAL;
+@@ -166,5 +182,6 @@
+ 		old = handle->mode.ieee1394->fcp_handler;
+ 		handle->mode.ieee1394->fcp_handler = new;
+ 	}
++	TRACEret("old_handle");
+ 	return old;
+ }
+diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c.orig ./src/eventloop.c.orig
+--- /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c.orig	1970-01-01 01:00:00.000000000 +0100
++++ ./src/eventloop.c.orig	2010-09-01 10:07:41.000000000 +0200
+@@ -0,0 +1,170 @@
++/*
++ * libraw1394 - library for raw access to the 1394 bus with the Linux subsystem.
++ *
++ * Copyright (C) 1999,2000,2001,2002 Andreas Bombe
++ *                     2002 Manfred Weihs <weihs@ict.tuwien.ac.at>
++ *                     2002 Christian Toegel <christian.toegel@gmx.at>
++ *
++ * This library is licensed under the GNU Lesser General Public License (LGPL),
++ * version 2.1 or later. See the file COPYING.LIB in the distribution for
++ * details.
++ *
++ *
++ * Contributions:
++ *
++ * Manfred Weihs <weihs@ict.tuwien.ac.at>
++ *        address range mapping
++ * Christian Toegel <christian.toegel@gmx.at>
++ *        address range mapping
++ */
++
++#include <config.h>
++#include <unistd.h>
++#include <byteswap.h>
++#include <errno.h>
++
++#include "raw1394.h"
++#include "kernel-raw1394.h"
++#include "raw1394_private.h"
++
++
++int ieee1394_loop_iterate(struct raw1394_handle *handle)
++{
++        struct raw1394_request req;
++        ieee1394handle_t ihandle = handle->mode.ieee1394;
++        int retval = 0;
++
++        while (read(ihandle->fd, &req, sizeof(req)) < 0) {
++                if (errno != EINTR) return -1;
++        }
++
++        switch (req.type) {
++        case RAW1394_REQ_BUS_RESET:
++                if (ihandle->protocol_version == 3) {
++                        ihandle->num_of_nodes = req.misc & 0xffff;
++                        ihandle->local_id = req.misc >> 16;
++                } else {
++                        ihandle->num_of_nodes = req.misc & 0xff;
++                        ihandle->irm_id = ((req.misc >> 8) & 0xff) | 0xffc0;
++                        ihandle->local_id = req.misc >> 16;
++                }
++
++                if (ihandle->bus_reset_handler) {
++                        retval = ihandle->bus_reset_handler(handle,
++                                                           req.generation);
++                }
++                break;
++
++        case RAW1394_REQ_FCP_REQUEST:
++                if (ihandle->fcp_handler) {
++                        retval = ihandle->fcp_handler(handle, req.misc & 0xffff,
++                                                     req.misc >> 16,
++                                                     req.length,
++                                                     (unsigned char *)ihandle->buffer);
++                }
++                break;
++
++        case RAW1394_REQ_ARM:
++                if (ihandle->arm_tag_handler) {
++                        retval = ihandle->arm_tag_handler(handle, req.tag,
++                                 (req.misc & (0xFF)), 
++                                 ((req.misc >> 16) & (0xFFFF)),
++                                 int2ptr(req.recvb));
++                } 
++                break;
++                
++        case RAW1394_REQ_ECHO:
++                retval=req.misc;
++                break;
++
++        case RAW1394_REQ_RAWISO_ACTIVITY:
++                retval = _ieee1394_iso_iterate(handle);
++                break;
++        
++        default:
++                if (ihandle->tag_handler) {
++                        retval = ihandle->tag_handler(handle, req.tag,
++                                                     req.error);
++                }
++                break;
++        }
++
++        return retval;
++}
++
++
++bus_reset_handler_t raw1394_set_bus_reset_handler(struct raw1394_handle *handle,
++                                                  bus_reset_handler_t new)
++{
++	bus_reset_handler_t old;
++	if (!handle) {
++		errno = EINVAL;
++		return NULL;
++	}
++	if (handle->is_fw) {
++		old = handle->mode.fw->bus_reset_handler;
++		handle->mode.fw->bus_reset_handler = new;
++	}
++	else {
++		old = handle->mode.ieee1394->bus_reset_handler;
++		handle->mode.ieee1394->bus_reset_handler = new;
++	}
++	return old;
++}
++
++tag_handler_t raw1394_set_tag_handler(struct raw1394_handle *handle, 
++                                      tag_handler_t new)
++{
++	tag_handler_t old;
++	if (!handle) {
++		errno = EINVAL;
++		return NULL;
++	}
++	if (handle->is_fw) {
++		old = handle->mode.fw->tag_handler;
++		handle->mode.fw->tag_handler = new;
++	}
++	else {
++		old = handle->mode.ieee1394->tag_handler;
++		handle->mode.ieee1394->tag_handler = new;
++	}
++	return old;
++}
++
++arm_tag_handler_t raw1394_set_arm_tag_handler(struct raw1394_handle *handle, 
++                                      arm_tag_handler_t new)
++{
++	arm_tag_handler_t old;
++	if (!handle) {
++		errno = EINVAL;
++		return NULL;
++	}
++	if (handle->is_fw) {
++		old = handle->mode.fw->arm_tag_handler;
++		handle->mode.fw->arm_tag_handler = new;
++	}
++	else {
++		old = handle->mode.ieee1394->arm_tag_handler;
++		handle->mode.ieee1394->arm_tag_handler = new;
++	}
++	return old;
++}
++
++fcp_handler_t raw1394_set_fcp_handler(struct raw1394_handle *handle,
++                                      fcp_handler_t new)
++{
++	fcp_handler_t old;
++	if (!handle) {
++		errno = EINVAL;
++		return NULL;
++	}
++	if (handle->is_fw) {
++		old = handle->mode.fw->fcp_handler;
++		handle->mode.fw->fcp_handler = new;
++	}
++	else {
++		old = handle->mode.ieee1394->fcp_handler;
++		handle->mode.ieee1394->fcp_handler = new;
++	}
++	return old;
++}
+diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c.rej ./src/eventloop.c.rej
+--- /home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c.rej	1970-01-01 01:00:00.000000000 +0100
++++ ./src/eventloop.c.rej	2010-09-01 10:09:14.000000000 +0200
+@@ -0,0 +1,32 @@
++--- home/bzr/Downloads/libraw1394-2.0.5/src/eventloop.c	2009-01-30 06:11:05.000000000 +0100
+++++ src/eventloop.c	2010-09-01 10:03:28.000000000 +0200
++@@ -122,12 +135,14 @@
++ 		old = handle->mode.ieee1394->bus_reset_handler;
++ 		handle->mode.ieee1394->bus_reset_handler = new;
++ 	}
+++	TRACEret("old_handle");
++ 	return old;
++ }
++ 
++ tag_handler_t raw1394_set_tag_handler(struct raw1394_handle *handle,
++                                       tag_handler_t new)
++ {
+++	TRACEh("raw1394_set_tag_handler(h = %d, new)", handle);
++ 	tag_handler_t old;
++ 	if (!handle) {
++ 		errno = EINVAL;
++@@ -141,12 +156,14 @@
++ 		old = handle->mode.ieee1394->tag_handler;
++ 		handle->mode.ieee1394->tag_handler = new;
++ 	}
+++	TRACEret("old_handle");
++ 	return old;
++ }
++ 
++ arm_tag_handler_t raw1394_set_arm_tag_handler(struct raw1394_handle *handle,
++                                       arm_tag_handler_t new)
++ {
+++	TRACEh("raw1394_set_arm_tag_handler(h = %d, new)", handle);
++ 	arm_tag_handler_t old;
++ 	if (!handle) {
++ 		errno = EINVAL;
+diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/fcp.c ./src/fcp.c
+--- /home/bzr/Downloads/libraw1394-2.0.5/src/fcp.c	2008-08-07 04:51:17.000000000 +0200
++++ ./src/fcp.c	2010-09-01 10:08:04.000000000 +0200
+@@ -17,8 +17,11 @@
+ #include "kernel-raw1394.h"
+ #include "raw1394_private.h"
+ 
++#include "trace.h"
++
+ static int do_fcp_listen(struct raw1394_handle *handle, int startstop)
+ {
++        TRACEh1("do_fcp_listen(h = %d, startstop = %d)", handle, startstop);
+         ieee1394handle_t ihandle = handle->mode.ieee1394;
+         struct sync_cb_data sd = { 0, 0 };
+         struct raw1394_reqhandle rh = { (req_callback_t)_raw1394_sync_cb, &sd };
+@@ -42,14 +45,17 @@
+         switch (sd.errcode) {
+         case RAW1394_ERROR_ALREADY:
+                 errno = EALREADY;
++		TRACEret("returns -1, errno = EALREADY");
+                 return -1;
+ 
+         case RAW1394_ERROR_INVALID_ARG:
+                 errno = EINVAL;
++		TRACEret("returns -1, errno = EINVAL");
+                 return -1;
+ 
+         default:
+                 errno = 0;
++		TRACEret1("returns %d, errno = 0", sd.errcode);
+                 return sd.errcode;
+         }
+ }
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/iso.c ./src/iso.c
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/iso.c	2008-08-07 04:51:17.000000000 +0200
-+++ ./src/iso.c	2010-08-26 16:27:01.000000000 +0200
++++ ./src/iso.c	2010-09-01 10:08:04.000000000 +0200
 @@ -22,6 +22,8 @@
  #include "kernel-raw1394.h"
  #include "raw1394_private.h"
@@ -1215,7 +1527,39 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/iso.c ./src/iso.c
  	return 0;
  }
  
-@@ -480,12 +494,24 @@
+@@ -243,6 +257,9 @@
+ 	struct raw1394_iso_packets packets;
+ 	int retval = -1;
+ 	int stop_sync = 0;
++#ifdef TRACELOOP
++        TRACEh("_iso_xmit_queue_packets(h = %d)", handle); fflush(stdout);
++#endif
+ 
+ 	if(ihandle->iso_mode != ISO_XMIT) {
+ 		errno = EINVAL;
+@@ -321,7 +338,9 @@
+ 			return -1;
+ 		ieee1394_iso_stop(ihandle);
+ 	}
+-	
++#ifdef TRACELOOP
++	TRACEret1("retval=%d", retval);
++#endif
+ 	return retval;
+ }
+ 
+@@ -458,7 +477,9 @@
+ 	struct raw1394_iso_packets packets;
+ 
+ 	int retval = -1, packets_done = 0;
+-
++#ifdef TRACELOOP		
++        TRACEh("_iso_recv_packets(h = %d)", handle); fflush(stdout);
++#endif
+ 	if(ihandle->iso_mode != ISO_RECV) {
+ 		errno = EINVAL;
+ 		return -1;
+@@ -480,12 +501,40 @@
  		info = &packets.infos[packets_done];
  
  		/* call handler */
@@ -1224,9 +1568,25 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/iso.c ./src/iso.c
 +			unsigned int dropped = _iso_dropped(ihandle);
 +#ifdef TRACELOOP		
 +//			printf("\033[f\n\n"); // Go to top-left of screen (prevents scrolling)
-+			TRACEh1("Calling handler (h = %d, buf, len = %u, channel = %u, tag = %u, cycle = %u, dropped = %u)", handle, info->len, info->channel, info->tag, info->sy, info->cycle, dropped);
++			TRACEh1("Calling handler (h = %d, buf, len = %u, channel = %u, tag = %u, cycle = %u, dropped)", handle, info->len, info->channel, info->tag, info->sy, info->cycle);
 +			TRACEquad("buf", (ihandle->iso_buffer + info->offset), 32);
 +			TRACEquad("buf", (ihandle->iso_buffer + info->offset + 32), 32);
++			int i;
++			struct data_read* dr = ((struct data_read *) (ihandle->iso_buffer + info->offset));
++			printf("Status bits (%2.2x):", dr->status.bits);
++			for(i = 0; i < 8; i++)
++			  printf("%d->%d ", i, (dr->status.bits & (1<<i))!=0);
++			printf("\n");
++			if(dr->status.bit3 != 0)
++			  printf("Status bit3 has unexpected (new) value! Check how this happened and find out meaning of this bit\n");
++			if(dr->status.bit4 != 1)
++			  printf("Status bit4 has unexpected (new) value! Check how this happened and find out meaning of this bit\n");
++			if(dr->status.bit5 != 0)
++			  printf("Status bit5 has unexpected (new) value! Check how this happened and find out meaning of this bit\n");
++			if(dr->status.bit6 != 0)
++			  printf("Status bit6 has unexpected (new) value! Check how this happened and find out meaning of this bit\n");
++			if(dr->status.bit7 != 1)
++			  printf("Status bit7 has unexpected (new) value! Check how this happened and find out meaning of this bit\n");
 +#endif
 +			disp = ihandle->iso_recv_handler(handle,
  						ihandle->iso_buffer + info->offset,
@@ -1242,9 +1602,77 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/iso.c ./src/iso.c
  
  		/* advance packet cursors */
  		stat->n_packets--;
+@@ -512,7 +561,10 @@
+ 		if(ioctl(ihandle->fd, RAW1394_IOC_ISO_RECV_RELEASE_PACKETS, packets_done))
+ 			retval = -1;
+ 	}
+-out:	
++out:
++#ifdef TRACELOOP
++	TRACEret1("retval=%d", retval);
++#endif
+ 	return retval;
+ }
+ 
+@@ -521,29 +573,53 @@
+ {
+ 	ieee1394handle_t ihandle = handle->mode.ieee1394;
+ 	int err;
++#ifdef TRACELOOP
++        TRACEh("_ieee1394_iso_iterate(h = %d)", handle); fflush(stdout);
++#endif
+ 
+ 	if(ihandle->iso_mode == ISO_INACTIVE)
++	{
++#ifdef TRACELOOP
++		TRACEret("ISO_INACTIVE");
++#endif
+ 		return 0;
++	}
+ 
+ 	err = ioctl(ihandle->fd, RAW1394_IOC_ISO_GET_STATUS, &ihandle->iso_status);
+ 	if(err != 0)
++	{
++#ifdef TRACELOOP
++		TRACEret1("ioctl failed: err = %d", err);
++#endif
+ 		return err;
++	}
+ 
+ 	ihandle->iso_packets_dropped += ihandle->iso_status.overflows;
+ 
+ 	if(ihandle->iso_state == ISO_GO) {
+ 		if(ihandle->iso_mode == ISO_XMIT) {
+ 			if(ihandle->iso_xmit_handler) {
+-				return _iso_xmit_queue_packets(handle);
++				int ret = _iso_xmit_queue_packets(handle);
++#ifdef TRACELOOP
++				TRACEret1("ret=%d", ret);
++#endif
++				return ret;
+ 			}
+ 		}
+ 
+ 		if(ihandle->iso_mode == ISO_RECV) {
+ 			if(ihandle->iso_recv_handler) {
+-				return _iso_recv_packets(handle);
++				int ret = _iso_recv_packets(handle);
++#ifdef TRACELOOP
++				TRACEret1("ret=%d", ret);
++#endif
++				return ret;
+ 			}
+ 		}
+ 	}
+ 
++#ifdef TRACELOOP
++	TRACEret("nothing to do...");
++#endif
+ 	return 0;
+ }
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.am ./src/Makefile.am
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.am	2009-06-22 06:22:25.000000000 +0200
-+++ ./src/Makefile.am	2010-08-25 09:43:40.000000000 +0200
++++ ./src/Makefile.am	2010-09-01 10:08:04.000000000 +0200
 @@ -27,7 +27,9 @@
  	dispatch.c        \
  	fw.c              \
@@ -1258,7 +1686,7 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.am ./src/Makefil
  # headers to be installed
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.in ./src/Makefile.in
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.in	2009-12-27 02:08:25.000000000 +0100
-+++ ./src/Makefile.in	2010-08-25 09:44:03.000000000 +0200
++++ ./src/Makefile.in	2010-09-01 10:08:04.000000000 +0200
 @@ -54,7 +54,7 @@
  LTLIBRARIES = $(lib_LTLIBRARIES)
  libraw1394_la_LIBADD =
@@ -1285,22 +1713,10 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/Makefile.in ./src/Makefil
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fw.Plo@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iso.Plo@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Plo@am__quote@
-diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/readwrite.c ./src/readwrite.c
---- /home/bzr/Downloads/libraw1394-2.0.5/src/readwrite.c	2008-08-07 04:51:17.000000000 +0200
-+++ ./src/readwrite.c	2010-08-25 09:44:11.000000000 +0200
-@@ -30,6 +30,8 @@
- #include "kernel-raw1394.h"
- #include "raw1394_private.h"
- 
-+#include "trace.h"
-+
- #if HAVE_VALGRIND_VALGRIND_H
- # include <valgrind/memcheck.h>
- # ifndef VALGRIND_MAKE_MEM_DEFINED_IF_ADDRESSABLE
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.c ./src/trace.c
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/trace.c	1970-01-01 01:00:00.000000000 +0100
-+++ ./src/trace.c	2010-08-25 09:44:16.000000000 +0200
-@@ -0,0 +1,45 @@
++++ ./src/trace.c	2010-09-01 10:08:04.000000000 +0200
+@@ -0,0 +1,54 @@
 +#include "stdio.h"
 +#include "stdarg.h"
 +#include "trace.h"
@@ -1335,6 +1751,15 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.c ./src/trace.c
 +  return next_handle_number - 1;
 +}
 +
++int get_ieee1394_handle_number(struct ieee1394_handle *handle)
++{
++  int i;
++  for(i = 0; i < next_handle_number; i++)
++    if(handles[i].handle->mode.ieee1394 == handle && handles[i].active)
++      return i; // Found handle!
++  return -1; // Did not find...
++}
++
 +void remove_handle_number(raw1394handle_t handle)
 +{
 +  int i;
@@ -1348,12 +1773,13 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.c ./src/trace.c
 +}
 diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.h ./src/trace.h
 --- /home/bzr/Downloads/libraw1394-2.0.5/src/trace.h	1970-01-01 01:00:00.000000000 +0100
-+++ ./src/trace.h	2010-08-25 12:48:19.000000000 +0200
-@@ -0,0 +1,38 @@
++++ ./src/trace.h	2010-09-01 10:08:04.000000000 +0200
+@@ -0,0 +1,93 @@
 +// Some custom macros to help debugging
 +
 +#pragma once
 +
++#include "raw1394_private.h"
 +#include "raw1394.h"
 +
 +#include "stdio.h"
@@ -1363,7 +1789,7 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.h ./src/trace.h
 +#define USETRACE
 +
 +// Comment to disable tracing the loop iterate functions (saves loads of output)
-+#define TRACELOOP
++//#define TRACELOOP
 +
 +#ifdef USETRACE
 +#  define TRACE(str)                     { printf("%12s:%4d %*s-> " str "\n", __FILE__, __LINE__, trace_ident, ""); trace_ident++; }
@@ -1372,7 +1798,7 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.h ./src/trace.h
 +#  define TRACEh1(str, handle, args...)  { printf("%12s:%4d %*s-> " str "\n", __FILE__, __LINE__, trace_ident, "", get_handle_number(handle), args); trace_ident++; }
 +#  define TRACEret(str)                  { trace_ident--; printf("%12s:%4d %*sexit " str "\n", __FILE__, __LINE__, trace_ident, ""); }
 +#  define TRACEret1(str, value)          { trace_ident--; printf("%12s:%4d %*sexit: " str "\n", __FILE__, __LINE__, trace_ident, "", value); }
-+#  define TRACEchar(str,buf,len)         { int i; printf("      " str ": "); for(i = 0; i < len; i++) printf("0x%2.2x ", ((char *) buf)[i]); printf("\n"); }
++#  define TRACEchar(str,buf,len)         { int i; printf("      " str ": "); for(i = 0; i < len; i++) printf("0x%2.2x ", ((unsigned char *) buf)[i]); printf("\n"); }
 +#  define TRACEquad(str,buf,len)         { int i; printf("      " str ": "); for(i = 0; i < len; i+=4) printf("0x%8.8x ", ((quadlet_t *) (((char *) buf) + i))[0]); printf("\n"); }
 +#else
 +#  define TRACE(str)
@@ -1385,6 +1811,60 @@ diff -N -r -u /home/bzr/Downloads/libraw1394-2.0.5/src/trace.h ./src/trace.h
 +#  define TRACEquad(str,buf, len)
 +#endif
 +
++/**
++ * Contains the values of the gimbal. For each axis the 5 most LSB are unused (too erratic)
++ */
++union gimbal_u {
++  unsigned short raw[3];
++  struct {
++    unsigned short x_unused:5;
++    unsigned short x:11;
++    unsigned short y_unused:5;
++    unsigned short y:11;
++    unsigned short z_unused:5;
++    unsigned short z:11;
++  };
++};
++
++/**
++ * Data structure of the data presented when the read callback handler is called
++ */
++struct data_read {
++    short unknown0; // always 0x0000 ??
++    short unknown1; // always 0x001e ??
++    unsigned short encoder_x;
++    unsigned short encoder_y;
++    unsigned short encoder_z;
++    union gimbal_u gimbal;
++    short unknown8;
++    unsigned char  unknown9a; // Also status bits?
++    union {
++      unsigned char bits;
++      struct {
++        unsigned char button1 : 1; // When 0 the button is pressed
++        unsigned char button2 : 1; // When 0 the button is pressed
++        unsigned char docked  : 1; // When 0 the gimbal is docked
++        unsigned char bit3    : 1;
++        unsigned char bit4    : 1;
++        unsigned char bit5    : 1;
++        unsigned char bit6    : 1;
++        unsigned char bit7    : 1;
++      };
++    } status;
++    short unknown10; // always 0x1007 -> not always: also have seen 0x0007
++    union gimbal_u gimbal_inv; // seems to be the inverse of gimbal
++    short unknown14; // always 0x5746
++    short unknown15;
++    quadlet_t count0; // msg nr?? since this value is increawed by one every time a messege is received (even when app is not running)
++    short unknown18;
++    short unknown19;
++    short count1; // Seems to be counting, slower than count0 (half the speed?)
++    short unknown21;
++    // After this: all zeros (not part of data anymore?)
++};
++
++
 +extern int trace_ident;
++extern int get_ieee1394_handle_number(struct ieee1394_handle *handle);
 +extern int get_handle_number(raw1394handle_t handle);
 +extern void remove_handle_number(raw1394handle_t handle);
