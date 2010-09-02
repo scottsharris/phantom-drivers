@@ -15,4 +15,16 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "base_device.h"
+#include "base-device.h"
+
+using namespace LibPhantom;
+
+BaseDevice::BaseDevice()
+{
+  com = Communication::createInstance();
+}
+
+BaseDevice::~BaseDevice()
+{
+  delete com;
+}

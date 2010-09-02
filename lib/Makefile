@@ -4,7 +4,7 @@ FW_METHOD?=libraw1394
 CFLAGS?=-Wall -O2
 CFLAGS+=-DUSE_$(FW_METHOD)
 
-FILES:= lp-com.cpp base_device.cpp
+FILES:= lp-com.cpp base-device.cpp phantom.cpp
 
 ifeq ($(FW_METHOD),libraw1394)
   FILES+=lp-com-libraw1394.cpp

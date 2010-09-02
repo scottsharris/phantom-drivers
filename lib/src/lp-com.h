@@ -23,9 +23,18 @@
 
 namespace LibPhantom
 {
+  /**
+   * Defines the communication methods to the firewire device (independent of the underlying library/driver)
+   *
+   * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class, 
+   * this function will return the correct underlying instance.
+   */
   class Communication
   {
   public:
+    /**
+     * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
+     */
     static Communication* createInstance();
 
     Communication();
@@ -40,6 +49,30 @@ namespace LibPhantom
      * Set the port for the object
      */
     virtual int setPort(int port);
+
+    /**
+     * @return the number of nodes connected to the selected port
+     */
+    virtual unsigned int getNumberOfNodes();
+
+    /**
+     * Read data from given node and address on the selected port (see setPort())
+     *
+     * @return 0 when there where no errors
+     */
+    virtual int read(unsigned int node, unsigned long address, char *buffer, unsigned int length) = 0;
+
+    /**
+     * Write data to given node and address on the selected port (see setPort())
+     *
+     * @return 0 when there where no errors
+     */
+    virtual int write(unsigned int node, unsigned long address, char *buffer, unsigned int length) = 0;
+
+    /**
+     * @returns the vendor id of the given node, or 0 when an error occurred (assuming vendor id 0 is not used...)
+     */
+    unsigned int getVendorId(unsigned node);
   protected:
     /**
      * Cached value of the number of ports available on the current system.
@@ -52,6 +85,23 @@ namespace LibPhantom
      * Port to which this object is connected to (or -1 if not connected yet)
      */
     int port;
+
+    /**
+     * Number of nodes connected to the port (cached value)
+     */
+    int nodes;
+
+    /**
+     * @returns the number of nodes without using the cached value (required to fill the cache)
+     */
+    virtual unsigned int getRealNumberOfNodes() = 0;
+
+    /**
+     * @param node is the node for which the config rom struct needs to be returned (it is not checked naymore since this is an internal function, so provide a valid node number!)
+     *
+     * @returns the config rom struct. Do not use directly, but use getters (eg getVendorId())
+     */
+    struct config_rom* getConfigRom(unsigned int node);
   };
 }
 

@@ -41,10 +41,40 @@ int CommunicationLibraw1394::getPorts()
     return -1;
   // Cache value, since we assume it will not change
   ports = raw1394_get_port_info(h, 0, 0);
+
+  // Create handles bound to each available port
   handles = new raw1394handle_t[ports];
   for(int i = 0; i < ports; i++)
     handles[i] = raw1394_new_handle_on_port(i);
   raw1394_destroy_handle(h);
 
   return ports;
+}
+
+unsigned int CommunicationLibraw1394::getRealNumberOfNodes()
+{
+  // Checking wether the port is connected is done in getNumberOfNodes() already
+  return raw1394_get_nodecount(handles[port]);
+}
+
+int CommunicationLibraw1394::read(unsigned int node, unsigned long address, char *buffer, unsigned int length)
+{
+  if(port == -1)
+  {
+    // Port is not set for this instance, so it is not possible to communicate
+    // TODO Add some error indication (use errno?)
+    return 1;
+  }
+  return raw1394_read(handles[port], node, address, length, (quadlet_t *) buffer);
+}
+
+int CommunicationLibraw1394::write(unsigned int node, unsigned long address, char *buffer, unsigned int length)
+{
+  if(port == -1)
+  {
+    // Port is not set for this instance, so it is not possible to communicate
+    // TODO Add some error indication (use errno?)
+    return 1;
+  }
+  return raw1394_write(handles[port], node, address, length, (quadlet_t *) buffer);
 }

@@ -17,9 +17,17 @@
 
 #pragma once
 
+#include "lp-com.h"
+
 namespace LibPhantom
 {
   class BaseDevice
   {
+  public:
+    BaseDevice();
+    virtual ~BaseDevice();
+
+  protected:
+    Communication *com;
   };
 }
