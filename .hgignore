@@ -1,8 +1,11 @@
 rev-eng/omni
+rev-eng/test-probe
 minimal-test/opensource
 minimal-test/proprietary
-.log
-.diff
-.swp
-.o
-.d
+/bin/
+/build_dir/
+/*log
+/*diff
+/*\.swp
+/*\.o
+/*\.d
