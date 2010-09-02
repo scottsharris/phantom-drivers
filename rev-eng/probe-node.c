@@ -38,7 +38,7 @@ int read_config_rom(raw1394handle_t handle, unsigned node, unsigned int cr_offse
 
 	if (raw1394_read(handle, phy_id, offset, length * 4, buffer) < 0)
 	{
-		fprintf(stderr,"node 0x%x: error reading %d quadlets config ROM offset 0x%x\n  (%d) %s", node, length, cr_offset, errno, strerror(errno));
+		fprintf(stderr,"node 0x%x: error reading %d quadlets config ROM offset 0x%x\n  (%d) %s\n", node, length, cr_offset, errno, strerror(errno));
 		return 1;
 	}
 	return 0;

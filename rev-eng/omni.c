@@ -263,14 +263,14 @@ void show_data(unsigned int device)
   else
     printf("Hold button 1 to apply force on X axis\n");
 
-   if(device == 0)
-   {
-     printf("Press button2 to perform a 'bus reset'\n");
-     if(devices[device].phantom_data.status.docked == 0)
-        printf("Undock and dock phantom to exit application\n");
-     else
-        printf("Dock phantom to exit application\n");
-    }
+  if(device == 0)
+  {
+    printf("Press button2 to perform a 'bus reset'\n");
+    if(devices[device].phantom_data.status.docked == 0)
+       printf("Undock and dock phantom to exit application\n");
+    else
+       printf("Dock phantom to exit application\n");
+   }
 }
 
 void fill_default_data(struct data_write *data)
@@ -375,6 +375,7 @@ int initialise_device(unsigned int device, int full_init)
   }
   printf("recv_channel = %d, xmit_channel = %d\n", devices[device].recv_channel, devices[device].xmit_channel);
 
+  // TODO What about other addresses (like 0x1000 and higher), is there more to configure or read status from?
   // TODO Need to find out what is happening/configuring?
   // Allocate/claim channels for out application
   raw1394_channel_modify(config_handle, devices[device].recv_channel, RAW1394_MODIFY_ALLOC);
@@ -393,7 +394,8 @@ int initialise_device(unsigned int device, int full_init)
   }
 
   // TODO Whithout this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
-  //bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
+  // It seems that it has something to do with timing: when this is enabled (with two devices) the data is *not* received in a steady flow (until it takes too long and the select() quits the application)
+  //quadlet_t bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
 
   if(get_expected_char(config_handle, node, ADDR_RECV_CHANNEL, devices[device].recv_channel, &bufc))
   {
@@ -559,8 +561,7 @@ int main()
         printf("Exiting... (no need to cleanup stuff since we do not have the connection anymore...)\n\n");
         return 0;
       }
-
-      printf("\n\033[2J"); // Clear screen
+//      printf("\n\033[2J"); // Clear screen
 
       // Now update the devices which have data available according to select()
       for(device = 0; device < found_devices; device++)
