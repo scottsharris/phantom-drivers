@@ -561,7 +561,7 @@ int main()
         printf("Exiting... (no need to cleanup stuff since we do not have the connection anymore...)\n\n");
         return 0;
       }
-//      printf("\n\033[2J"); // Clear screen
+      printf("\n\033[2J"); // Clear screen
 
       // Now update the devices which have data available according to select()
       for(device = 0; device < found_devices; device++)
