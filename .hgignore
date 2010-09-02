@@ -5,3 +5,4 @@ minimal-test/proprietary
 .diff
 .swp
 .o
+.d
