@@ -23,6 +23,8 @@
 
 using namespace LibPhantom;
 
+raw1394handle_t* CommunicationLibraw1394::handles = 0;
+
 CommunicationLibraw1394::CommunicationLibraw1394() : Communication()
 {
 }

@@ -17,6 +17,21 @@ define CreateCompileTargets
   )
 endef
 
+define CreateTestAppTargets
+  $(foreach test_app,$(1),
+    # Create link target
+    build_dir/$(test_app): tests/$(test_app).cpp bin/libphantom.a
+	$(CXX) $(CFLAGS) $(CPPFLAGS) -Lbin -Isrc -o $$@ $$< -lraw1394 -lphantom
+  )
+endef
+
+define RunTests
+$(foreach test_app,$(1),
+	@echo Running test: $(test_app)
+	@-build_dir/$(test_app)
+)
+endef
+
 # Add targets for the required directories
 build_dir bin:
 	@mkdir -p $@

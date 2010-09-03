@@ -73,6 +73,11 @@ namespace LibPhantom
      * @returns the vendor id of the given node, or 0 when an error occurred (assuming vendor id 0 is not used...)
      */
     unsigned int getVendorId(unsigned node);
+
+    /**
+     * @returns the name of the vendor if it is supplied in the ROM of the device, or 0 when an error occurred (ie the name is not available)
+     */
+    char *getVendorName(unsigned node);
   protected:
     /**
      * Cached value of the number of ports available on the current system.
@@ -102,6 +107,17 @@ namespace LibPhantom
      * @returns the config rom struct. Do not use directly, but use getters (eg getVendorId())
      */
     struct config_rom* getConfigRom(unsigned int node);
+
+  private:
+    /**
+     * Number of config_rom structs that are cached in config_roms
+     */
+    static unsigned int number_of_config_roms;
+
+    /**
+     * Cached config roms, prevents to recreate them all the time
+     */
+    static struct config_rom** config_roms;
   };
 }
 

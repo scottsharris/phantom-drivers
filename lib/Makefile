@@ -5,6 +5,7 @@ CFLAGS?=-Wall -O2
 CFLAGS+=-DUSE_$(FW_METHOD)
 
 FILES:= lp-com.cpp base-device.cpp phantom.cpp
+TEST_APPS:= config_rom
 
 ifeq ($(FW_METHOD),libraw1394)
   FILES+=lp-com-libraw1394.cpp
@@ -22,7 +23,11 @@ bin/libphantom.a: $(addprefix build_dir/,$(call ConvertToObjectNames,$(FILES))) 
 install: bin/libphantom.a
 	@echo "Install libphantom!"
 
+tests: bin/libphantom.a $(addprefix build_dir/,$(TEST_APPS))
+	$(call RunTests,$(TEST_APPS))
+
 clean:
 	rm -rf build_dir bin
 
 $(eval $(call CreateCompileTargets,$(FILES)))
+$(eval $(call CreateTestAppTargets,$(TEST_APPS)))
