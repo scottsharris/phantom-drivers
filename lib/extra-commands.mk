@@ -27,6 +27,7 @@ endef
 
 define RunTests
 $(foreach test_app,$(1),
+	@echo
 	@echo Running test: $(test_app)
 	@-build_dir/$(test_app)
 )

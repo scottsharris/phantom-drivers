@@ -137,6 +137,20 @@ char *Communication::getVendorName(unsigned int node)
   return crom == 0 ? 0 : crom->vendor;
 }
 
+bool Communication::isSensAbleDevice(unsigned int node)
+{
+  // Check if node has a SensAble device
+  if(getVendorId(node) != 0x000b99)
+    return false;
+
+  // Read vendor id from device memory as well
+  uint32_t vendor;
+  if(read((1023<<6) | node, 0x1006000c, (char *) &vendor, 4) || vendor != 0x00990b00)
+    return false;
+
+  return true;
+}
+
 struct config_rom* Communication::getConfigRom(unsigned int node)
 {
   unsigned int i;

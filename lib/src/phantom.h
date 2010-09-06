@@ -17,12 +17,14 @@
 
 #pragma once
 
+#include <stdint.h>
 #include "base-device.h"
 
 namespace LibPhantom
 {
   class Phantom : public BaseDevice
   {
+  public:
     virtual ~Phantom();
 
     /**
@@ -33,6 +35,7 @@ namespace LibPhantom
 
     /**
      * @return the device with the given serial, or 0 if that device already is in use
+     *         If the device with serial already got claimed, the pointer to the device is returned again (not a copy!!)
      */
     static Phantom* findPhantom(unsigned int serial);
 
@@ -40,9 +43,17 @@ namespace LibPhantom
     /**
      * Do no use constructor directly, but use findPhantom() functionalities.
      */
-    Phantom();
+    Phantom(unsigned int port, unsigned int node);
 
-    Communication *com;
+    /**
+     * @return serial id (read directly from device memory) or 0 when something went wrong
+     */
+    virtual uint32_t readDeviceSerial();
+
+    /**
+     * @return serial id (read directly from device memory) or 0 when something went wrong
+     */
+    static uint32_t readDeviceSerial(Communication *c, unsigned int node);
 
    private:
     /**

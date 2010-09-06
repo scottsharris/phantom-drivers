@@ -78,6 +78,11 @@ namespace LibPhantom
      * @returns the name of the vendor if it is supplied in the ROM of the device, or 0 when an error occurred (ie the name is not available)
      */
     char *getVendorName(unsigned node);
+
+    /**
+     * @return true if the node is a SensAble device
+     */
+    bool isSensAbleDevice(unsigned int node);
   protected:
     /**
      * Cached value of the number of ports available on the current system.

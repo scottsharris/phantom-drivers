@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include "lp-com.h"
 
 namespace LibPhantom
@@ -24,10 +25,33 @@ namespace LibPhantom
   class BaseDevice
   {
   public:
-    BaseDevice();
+    BaseDevice(unsigned int port, unsigned int node);
     virtual ~BaseDevice();
 
+    /**
+     * @return the serial number of the device or 0 is it could not be determined
+     */
+    uint32_t getSerial();
+
   protected:
+    /**
+     * Communication handle for device
+     */
     Communication *com;
+
+    /**
+     * Node number of device
+     */
+    unsigned int node;
+
+    /**
+     * @return the device serial/unique number directly from device
+     */
+    virtual uint32_t readDeviceSerial() = 0;
+
+    /**
+     * Serial/unique number of device, or 0 is it is unknown
+     */
+    uint32_t serial;
   };
 }

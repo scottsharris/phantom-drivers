@@ -19,12 +19,20 @@
 
 using namespace LibPhantom;
 
-BaseDevice::BaseDevice()
+BaseDevice::BaseDevice(unsigned int port, unsigned int node) : node(node), serial(0)
 {
   com = Communication::createInstance();
+  com->setPort(port);
 }
 
 BaseDevice::~BaseDevice()
 {
   delete com;
+}
+
+uint32_t BaseDevice::getSerial()
+{
+  if(serial == 0)
+    serial = readDeviceSerial();
+  return serial;
 }
