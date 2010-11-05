@@ -21,108 +21,109 @@
 
 #pragma once
 
+#include <sys/types.h>
+
 namespace LibPhantom
 {
+//TODO Take a look at the fields and remove the ones which do not influence finding PHANTOM devices (ie vendor name)
+
+struct config_rom {
+  unsigned char motu_fw_audio:1;
+  unsigned char irm_cap:1;
+  unsigned char cycle_master_cap:1;
+  unsigned char iso_cap:1;
+  unsigned char bus_manager_cap:1;
+  unsigned char cycle_clk_accuracy;
+  unsigned int max_async_bwrite_payload;
+  unsigned int link_speed;
+  union
+  {
+    struct {
+      u_int32_t guid_lo;
+      u_int32_t guid_hi;
+    };
+    u_int64_t guid;
+  };
+  u_int32_t node_capabilities;
+  u_int32_t vendor_id;
+  u_int32_t unit_spec_id;
+  u_int32_t unit_sw_version;
+  u_int32_t model_id;
+
+  char *vendor;
+
+};
+
+	class DeviceIterator;
+	class FirewireDevice;
+
   /**
    * Defines the communication methods to the firewire device (independent of the underlying library/driver)
    *
    * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class, 
    * this function will return the correct underlying instance.
    */
-  class Communication
-  {
+	class Communication
+	{
+	public:
+	  /**
+	   * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
+	   */
+	  static Communication* createInstance();
+
+	  Communication();
+	  virtual ~Communication();
+	  virtual DeviceIterator* getDevices()=0;
+	};
+
+	class DeviceIterator {
+	public:
+		virtual FirewireDevice* next()=0;
+	};
+
+  class FirewireDevice {
   public:
+	FirewireDevice();
+	virtual ~FirewireDevice();
     /**
-     * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
+     * Read data from given address
      */
-    static Communication* createInstance();
-
-    Communication();
-    virtual ~Communication();
-
-    /**
-     * @returns the number of available ports on the system, or -1 if an error occurred
-     */
-    static int getPorts();
+    virtual void read(unsigned long address, char *buffer, unsigned int length) = 0;
 
     /**
-     * Set the port for the object
+     * Write data to given address
      */
-    virtual int setPort(int port);
+    virtual void write(unsigned long address, char *buffer, unsigned int length) = 0;
 
     /**
-     * @return the number of nodes connected to the selected port
+     * @returns the vendor id of the device
      */
-    virtual unsigned int getNumberOfNodes();
-
-    /**
-     * Read data from given node and address on the selected port (see setPort())
-     *
-     * @return 0 when there where no errors
-     */
-    virtual int read(unsigned int node, unsigned long address, char *buffer, unsigned int length) = 0;
-
-    /**
-     * Write data to given node and address on the selected port (see setPort())
-     *
-     * @return 0 when there where no errors
-     */
-    virtual int write(unsigned int node, unsigned long address, char *buffer, unsigned int length) = 0;
-
-    /**
-     * @returns the vendor id of the given node, or 0 when an error occurred (assuming vendor id 0 is not used...)
-     */
-    unsigned int getVendorId(unsigned node);
+    unsigned int getVendorId();
 
     /**
      * @returns the name of the vendor if it is supplied in the ROM of the device, or 0 when an error occurred (ie the name is not available)
      */
-    char *getVendorName(unsigned node);
+    char *getVendorName();
 
     /**
      * @return true if the node is a SensAble device
      */
-    bool isSensAbleDevice(unsigned int node);
-  protected:
-    /**
-     * Cached value of the number of ports available on the current system.
-     * (Assumes that this number will not change at runtime)
-     * Read value with getPorts()
-     */
-    static int ports;
+    bool isSensableDevice();
 
     /**
-     * Port to which this object is connected to (or -1 if not connected yet)
-     */
-    int port;
-
-    /**
-     * Number of nodes connected to the port (cached value)
-     */
-    int nodes;
-
-    /**
-     * @returns the number of nodes without using the cached value (required to fill the cache)
-     */
-    virtual unsigned int getRealNumberOfNodes() = 0;
-
-    /**
-     * @param node is the node for which the config rom struct needs to be returned (it is not checked naymore since this is an internal function, so provide a valid node number!)
-     *
      * @returns the config rom struct. Do not use directly, but use getters (eg getVendorId())
      */
-    struct config_rom* getConfigRom(unsigned int node);
-
+    struct config_rom* getConfigRom();
   private:
-    /**
-     * Number of config_rom structs that are cached in config_roms
-     */
-    static unsigned int number_of_config_roms;
+    void readConfigRom();
+    struct config_rom configRom;
+    bool configRomRead; //Did we try to read the config ROM?
+    bool configRomValid; //Did we successfully read the config ROM?
 
-    /**
-     * Cached config roms, prevents to recreate them all the time
-     */
-    static struct config_rom** config_roms;
+
   };
+
+
+
 }
 

@@ -37,9 +37,9 @@ int main()
   Phantom *p;
   while((p = Phantom::findPhantom(0)) != 0)
   {
-    printf("Found a PHANTOM: %x\n", p->getSerial());
+    printf("Found a PHANTOM: %x\n", p->readDeviceSerial());
     list[devices_found] = p;
-    serial = p->getSerial();
+    serial = p->readDeviceSerial();
     devices_found++;
   }
   if(devices_found == 0)
@@ -60,11 +60,11 @@ int main()
     return 1;
   }
 
-  // Get the device object again (not a copy)
-  Phantom *p1 = Phantom::findPhantom(serial);
-  if(p != p1)
+  // Find last PHANTOM a second time
+  p = Phantom::findPhantom(serial);
+  if(p != 0)
   {
-    printf("Error: both device objects should be the same...\n");
+    printf("Error: could open a device twice...\n");
     return 1;
   }
 

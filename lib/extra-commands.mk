@@ -21,7 +21,7 @@ define CreateTestAppTargets
   $(foreach test_app,$(1),
     # Create link target
     build_dir/$(test_app): tests/$(test_app).cpp bin/libphantom.a
-	$(CXX) $(CFLAGS) $(CPPFLAGS) -Lbin -Isrc -o $$@ $$< -lraw1394 -lphantom
+	$(CXX) $(CFLAGS) $(CPPFLAGS) -Lbin -Isrc -o $$@ $$< $(LIBS) -lphantom
   )
 endef
 

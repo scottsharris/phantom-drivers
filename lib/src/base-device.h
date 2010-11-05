@@ -25,33 +25,25 @@ namespace LibPhantom
   class BaseDevice
   {
   public:
-    BaseDevice(unsigned int port, unsigned int node);
+	/* Reference to the FirewireDevice is consumed (i.e. the object is deleted
+	 * upon dstruction of the BaseDevice*/
+    BaseDevice(FirewireDevice *fw);
     virtual ~BaseDevice();
-
-    /**
-     * @return the serial number of the device or 0 is it could not be determined
-     */
-    uint32_t getSerial();
-
-  protected:
-    /**
-     * Communication handle for device
-     */
-    Communication *com;
-
-    /**
-     * Node number of device
-     */
-    unsigned int node;
 
     /**
      * @return the device serial/unique number directly from device
      */
     virtual uint32_t readDeviceSerial() = 0;
 
+  protected:
     /**
-     * Serial/unique number of device, or 0 is it is unknown
+     * Communication handle for device
      */
-    uint32_t serial;
+    FirewireDevice *firewireDevice;
+
+
+
+
+
   };
 }

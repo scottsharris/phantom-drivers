@@ -16,47 +16,23 @@
  */
 
  #include <stdlib.h>
+#include <stdio.h>
 
 #include "phantom.h"
 
 using namespace LibPhantom;
 
-// Create phantoms list
-unsigned int Phantom::phantoms_size = 2;
-Phantom** Phantom::phantoms = (Phantom **) malloc(sizeof(Phantom *) * Phantom::phantoms_size);
 
-// No Phantoms are in use yet
-unsigned int Phantom::number_of_phantoms = 0;
 
-Phantom::Phantom(unsigned int port, unsigned int node) : BaseDevice(port, node)
+Phantom::Phantom(FirewireDevice *fw) : BaseDevice(fw)
 {
-  // Add this instance to the list of phantoms
-  if(number_of_phantoms == phantoms_size)
-  {
-    // Make list bigger (not by too much since it is unlikely that there are much more devices attached to the system)
-    phantoms_size += 2;
-    phantoms = (Phantom **) realloc((void *) phantoms, sizeof(Phantom *) * Phantom::phantoms_size);
-    // TODO Error checking!
-  }
-  phantoms[number_of_phantoms] = this;
 
-  number_of_phantoms++;
-
-  // TODO Add callback handlers (at least for bus reset)
 }
 
 Phantom::~Phantom()
 {
   // TODO Remove callback handler(s)
-  unsigned int i;
 
-  number_of_phantoms--;
-  // Remove this instance from list of phantoms
-  for(i = 0; i < number_of_phantoms; i++)
-    if(phantoms[i] == this)
-      break;
-  for(;i < number_of_phantoms; i++)
-    phantoms[i] = phantoms[i + 1];
 }
 
 Phantom* Phantom::findPhantom()
@@ -67,78 +43,51 @@ Phantom* Phantom::findPhantom()
 // If serial is 0, any Phantom device will suffice
 Phantom* Phantom::findPhantom(unsigned int serial)
 {
+
   // TODO Cache the Phantom devices and recreate list upon bus resets (much more efficient, assuming that it does not take too much resources to create the list...)
 
-  unsigned int port = 0;
-  unsigned int ports;
-  if(Communication::getPorts() == -1)
-    return 0;
-  ports = (unsigned int) Communication::getPorts();
+  Communication *com = Communication::createInstance();
 
-  while(port < ports)
-  {
-    Communication *c = Communication::createInstance();
-    c->setPort(port);
-    unsigned int nodes =  c->getNumberOfNodes();
-    for(unsigned int node = 0; node < nodes; node++)
-    {
-      // Check if node is a SensAble device
-      if(c->isSensAbleDevice(node))
-      {
-        // TODO Check if it is a PHANTOM device
-        // TODO Check what PHANTOM device type it is
 
-	// Since we found a PHANTOM device, we can read its serial/unique number
-	uint32_t device_serial = readDeviceSerial(c, node);
-	if(device_serial == 0)
-	{
-	  // Could not read serial number...
-	  continue;
-	}
-	if(serial != 0 && serial != device_serial)
-	{
-	  // Found serial does not match required serial
-	  continue;
-	}
+  FirewireDevice *dev;
+  DeviceIterator *i=com->getDevices();
 
-	// Check if the serial matches with any other known device
-        unsigned int i;
-	for(i = 0; i < number_of_phantoms; i++)
-	  if(phantoms[i]->getSerial() == device_serial)
-	    break;  // Device already in use...
-	if(i < number_of_phantoms)
-        {
-          if(serial != 0)
-            return phantoms[i]; // .. but the user requested this device, so we return the requested device id again
-	  continue; // ... so we cannot claim it again
-        }
+  for(dev=i->next();dev;dev=i->next()) {
+    //printf("Device -> vendor: 0x%6.6x %s\n", dev->getVendorId(), dev->getVendorName());
+    if(dev->isSensableDevice()) {
+    	uint32_t device_serial = readDeviceSerial(dev);
+    	//printf("Serial %d\n",device_serial);
+    	if(serial != 0 && serial != device_serial)
+    	{
+    	  delete dev;
+    	  continue;
+    	}
 
-	// Found an unused Phantom with correct serial
-	return new Phantom(port, node);
-      }
+    	//We have found a Phantom device
+    	delete i;
+    	return new Phantom(dev);
+
     }
 
-    // We do not need the Communication object anymore, sicne it is specific for a port
-    delete c;
-
-    // Try next port
-    port++;
+    delete dev;
   }
+  delete i;
 
   // We failed to find a(n unused) Phantom device...
   return 0;
 }
 
+
+
 uint32_t Phantom::readDeviceSerial()
 {
-  return readDeviceSerial(com, node);
+  return readDeviceSerial(firewireDevice);
 }
 
-uint32_t Phantom::readDeviceSerial(Communication *c, unsigned int node)
+uint32_t Phantom::readDeviceSerial(FirewireDevice *firewireDevice)
 {
   uint32_t serial;
-  // For a PHANTOM Omni thise address can be read to obtain the serial/unique number
-  if(c->read((1023<<6) | node, 0x10060010, (char *) &serial, 4))
-    return 0;
+  // For a PHANTOM Omni this address can be read to obtain the serial/unique number
+  firewireDevice->read(0x10060010, (char *) &serial, 4);
   return serial;
 }

@@ -1,7 +1,7 @@
 # FW_METHOD defines the method
 FW_METHOD?=libraw1394
 
-CFLAGS?=-Wall -O2
+CFLAGS?=-Wall -O0 -g
 CFLAGS+=-DUSE_$(FW_METHOD)
 
 FILES:= lp-com.cpp base-device.cpp phantom.cpp
@@ -9,8 +9,14 @@ TEST_APPS:= config_rom phantom_find
 
 ifeq ($(FW_METHOD),libraw1394)
   FILES+=lp-com-libraw1394.cpp
+  LIBS+=-lraw1394
 else
-  $(error Unknown value for FW_METHOD: $(FW_METHOD). Recognised values are libraw1394 (default))
+ifeq ($(FW_METHOD),macosx)
+  FILES+=lp-com-macosx.cpp
+  LIBS+=-framework Corefoundation -framework IOKit
+else
+  $(error Unknown value for FW_METHOD: $(FW_METHOD). Recognised values are libraw1394 (default) and macosx)
+endif
 endif
 
 all: bin/libphantom.a

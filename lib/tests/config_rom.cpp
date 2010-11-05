@@ -21,8 +21,15 @@
 
 #include <stdio.h>
 #include <sys/types.h>
+#include <assert.h>
 
-#include "lp-com-libraw1394.h"
+#include "lp-com.h"
+
+#include "lp-com-macosx.h"
+
+
+#define CSR_REGISTER_BASE  0xfffff0000000ULL
+#define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400
 
 int main()
 {
@@ -30,14 +37,46 @@ int main()
 
   Communication *com = Communication::createInstance();
 
-  if(com->setPort(0))
-  {
-    printf("Unable to select port 0, are there any firewire ports available?!\n");
-    return 1;
+  FirewireDevice *d;
+  DeviceIterator *i=com->getDevices();
+
+  int test1NumDevices=0;
+  int test2NumDevices=0;
+
+  printf("Test 1: finding devices, closing after use\n");
+  for(d=i->next();d;d=i->next()) {
+    printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
+    delete d;
+    test1NumDevices++;
+  }
+  if (test1NumDevices==0) {
+	  printf("No device was found\n");
+	  return 1;
   }
 
-  printf("%u Node(s) available on port 0\n", com->getNumberOfNodes());
+  printf("Test 2: finding devices, not closing after use\n");
+  i=com->getDevices();
+  for(d=i->next();d;d=i->next()) {
+    printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
+    test2NumDevices++;
+  }
+  if (test1NumDevices!=test2NumDevices) {
+	  printf("Number of devices changed\n");
+	  return 1;
+  }
 
-  for(unsigned int node = 0; node < com->getNumberOfNodes(); node++)
-    printf("Node %u -> vendor: 0x%6.6x %s\n", node, com->getVendorId(node), com->getVendorName(node)?com->getVendorName(node):"");
+
+  //Test: do deliberately *not* delete the devices, they should not be found again!
+
+  printf("Test 3: finding devices, even though all should be open\n");
+  i=com->getDevices();
+  for(d=i->next();d;d=i->next()) {
+	printf("A device could be opened twice\n");
+	return 1;
+  }
+
+
+  delete i;
+
+  return 0;
 }

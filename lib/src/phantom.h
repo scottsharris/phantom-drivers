@@ -39,36 +39,23 @@ namespace LibPhantom
      */
     static Phantom* findPhantom(unsigned int serial);
 
-  protected:
-    /**
-     * Do no use constructor directly, but use findPhantom() functionalities.
-     */
-    Phantom(unsigned int port, unsigned int node);
-
     /**
      * @return serial id (read directly from device memory) or 0 when something went wrong
      */
     virtual uint32_t readDeviceSerial();
 
+  protected:
+    /**
+     * Do no use constructor directly, but use findPhantom() functionalities.
+     */
+    Phantom(FirewireDevice *fw);
+
+
+
     /**
      * @return serial id (read directly from device memory) or 0 when something went wrong
      */
-    static uint32_t readDeviceSerial(Communication *c, unsigned int node);
+    static uint32_t readDeviceSerial(FirewireDevice *firewireDevice);
 
-   private:
-    /**
-     * This list contains all active Phantom instances
-     */
-    static Phantom** phantoms;
-
-    /**
-     * Nubmer of active phantoms
-     */
-    static unsigned int number_of_phantoms;
-
-    /**
-     * Size of phantoms list
-     */
-    static unsigned int phantoms_size;
   };
 }

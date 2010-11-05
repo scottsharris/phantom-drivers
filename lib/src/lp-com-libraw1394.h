@@ -61,4 +61,10 @@ namespace LibPhantom {
      */
     static raw1394handle_t *handles;
   };
+
+  class FirewireDeviceLibraw1394 {
+
+  }
+  };
+
 }
