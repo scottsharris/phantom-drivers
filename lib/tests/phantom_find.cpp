@@ -68,5 +68,6 @@ int main()
     return 1;
   }
 
+  printf("Tests succeeded!\n");
   return 0;
 }

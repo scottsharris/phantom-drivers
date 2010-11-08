@@ -16,55 +16,92 @@
  */
 
  /*
-  * Phantom Library Communications: Define class to communicate using libraw1394
+  * Phantom Library Communications: FireWire communication driver for libraw1394
   */
 
-#include "lp-com.h"
+#pragma once
+
+#include <sys/types.h>
 #include "libraw1394/raw1394.h"
 
-namespace LibPhantom {
-  class CommunicationLibraw1394 : public Communication
+#include "lp-com.h"
+
+namespace LibPhantom
+{
+  class DeviceIteratorLibraw1394;
+  class FirewireDeviceLibraw1394;
+
+  /**
+   * Defines the communication methods to the firewire device (independent of the underlying library/driver)
+   *
+   * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class,
+   * this function will return the correct underlying instance.
+   */
+  class CommunicationLibraw1394:public Communication
   {
   public:
-    CommunicationLibraw1394();
-    virtual ~CommunicationLibraw1394();
+     CommunicationLibraw1394();
+    ~CommunicationLibraw1394();
+    DeviceIterator *getDevices();
+  };
 
-    /**
-     * @returns the number of available ports on the system, or -1 if an error occurred
-     */
-    static int getPorts();
-
-    /**
-     * Read data from given node and address on the selected port (see setPort())
-     *
-     * @return 0 when there where no errors
-     */
-    virtual int read(unsigned int node, unsigned long address, char *buffer, unsigned int length);
-
-    /**
-     * Write data to given node and address on the selected port (see setPort())
-     *
-     * @return 0 when there where no errors
-     */
-    virtual int write(unsigned int node, unsigned long address, char *buffer, unsigned int length);
-
+  class DeviceIteratorLibraw1394:public DeviceIterator {
+  public: //TODO: friend??
+	  DeviceIteratorLibraw1394();
+	  ~DeviceIteratorLibraw1394();
+  public:
+	  FirewireDevice* next();
   protected:
-    /**
-     * @return the number of nodes connected to the selected port
-     */
-    virtual unsigned int getRealNumberOfNodes();
+	  /**
+	   * Current port of this iterator
+	   */
+	  int port;
 
-    /**
-     * List with raw1394 handles, each connected to its own port
-     * The list is created when getPorts() is called for the first time
-     * (by then it is known how much handles needs to be created)
-     */
-    static raw1394handle_t *handles;
+	  /**
+	   * Current node of this iterator
+	   */
+	  int node;
+
+	  /**
+	   * Amount of available ports
+	   */
+	  static int ports;
+
+	  /**
+	   * Number of nodes available on current port
+	   */
+	  int nodes;
+
+	  /**
+	   * Libraw1394 handle which is connected to the current port
+	   */
+	  raw1394_handle *handle;
+
+	  /**
+	   * @return the number of available ports (cached)
+	   */
+	  int getPorts();
   };
 
-  class FirewireDeviceLibraw1394 {
 
-  }
+  class FirewireDeviceLibraw1394: public FirewireDevice {
+  public: //TODO: friend??
+	  FirewireDeviceLibraw1394(u_int32_t port, u_int32_t node);
+	  ~FirewireDeviceLibraw1394();
+	  void read(unsigned long address, char *buffer, unsigned int length);
+	  void write(unsigned long address, char *buffer, unsigned int length);
+
+	  static bool deviceIsOpen(u_int32_t port, u_int32_t node);
+  protected:
+
+    raw1394_handle *handle;
+
+    u_int32_t port;
+    u_int32_t node;
+
+    static unsigned int max_open_devices;
+    static unsigned int number_of_open_devices;
+    static FirewireDeviceLibraw1394**  open_devices;
   };
-
 }
+

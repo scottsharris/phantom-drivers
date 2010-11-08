@@ -25,9 +25,6 @@
 
 #include "lp-com.h"
 
-#include "lp-com-macosx.h"
-
-
 #define CSR_REGISTER_BASE  0xfffff0000000ULL
 #define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400
 
@@ -74,9 +71,8 @@ int main()
 	printf("A device could be opened twice\n");
 	return 1;
   }
-
-
   delete i;
 
+  printf("Tests succeeded!\n");
   return 0;
 }

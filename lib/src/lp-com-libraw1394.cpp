@@ -16,16 +16,16 @@
  */
 
  /*
-  * Phantom Library Communications: Implement communications using libraw1394
+  * Phantom Library Communications: FireWire communication driver for libraw1394
   */
+
+#include <stdlib.h> // NULL
 
 #include "lp-com-libraw1394.h"
 
 using namespace LibPhantom;
 
-raw1394handle_t* CommunicationLibraw1394::handles = 0;
-
-CommunicationLibraw1394::CommunicationLibraw1394() : Communication()
+CommunicationLibraw1394::CommunicationLibraw1394()
 {
 }
 
@@ -33,50 +33,127 @@ CommunicationLibraw1394::~CommunicationLibraw1394()
 {
 }
 
-int CommunicationLibraw1394::getPorts()
+DeviceIterator *CommunicationLibraw1394::getDevices() {
+        return new DeviceIteratorLibraw1394();
+}
+
+// Number of ports is not available yet
+// TODO On bus-reset set ports back to -1
+int DeviceIteratorLibraw1394::ports = -1;
+
+DeviceIteratorLibraw1394::DeviceIteratorLibraw1394() : port(0), node(0)
 {
-  if(ports != -1)
-    return ports;
+	if(getPorts() == 0)
+	{
+		nodes = 0;
+		handle = 0;
+	}
+	else
+	{
+		handle = raw1394_new_handle_on_port(0);
+		nodes = raw1394_get_nodecount(handle);
+	}
+}
 
-  raw1394handle_t h = raw1394_new_handle();
-  if(h == 0)
-    return -1;
-  // Cache value, since we assume it will not change
-  ports = raw1394_get_port_info(h, 0, 0);
+DeviceIteratorLibraw1394::~DeviceIteratorLibraw1394()
+{
+	if(handle)
+	{
+		raw1394_destroy_handle(handle);
+	}
+}
 
-  // Create handles bound to each available port
-  handles = new raw1394handle_t[ports];
-  for(int i = 0; i < ports; i++)
-    handles[i] = raw1394_new_handle_on_port(i);
-  raw1394_destroy_handle(h);
+FirewireDevice* DeviceIteratorLibraw1394::next()
+{
+	for(;;)
+	{
+		if(node >= nodes)
+		{
+			port++;
+			if(port >= getPorts())
+			{
+				return NULL;
+			}
+			raw1394_destroy_handle(handle);
+			handle = raw1394_new_handle_on_port(port);
+			nodes = raw1394_get_nodecount(handle);
+			node = 0;
+		}
 
+		if(!FirewireDeviceLibraw1394::deviceIsOpen(port, node))
+		{
+			FirewireDevice *device = new FirewireDeviceLibraw1394(port, node);
+			node++;
+			return device;
+		}
+		node++;
+	}
+}
+
+int DeviceIteratorLibraw1394::getPorts()
+{
+  if(ports == -1)
+  {
+	  raw1394handle_t h = raw1394_new_handle();
+	  if(h == 0)
+	  {
+		// TODO Throw error
+	  }
+	  // Cache value, since we assume it will not change
+	  ports = raw1394_get_port_info(h, 0, 0);
+	  raw1394_destroy_handle(h);
+  }
   return ports;
 }
 
-unsigned int CommunicationLibraw1394::getRealNumberOfNodes()
+unsigned int FirewireDeviceLibraw1394::number_of_open_devices = 0;
+unsigned int FirewireDeviceLibraw1394::max_open_devices = 2;
+FirewireDeviceLibraw1394** FirewireDeviceLibraw1394::open_devices = (FirewireDeviceLibraw1394**) malloc(sizeof(FirewireDeviceLibraw1394**) * FirewireDeviceLibraw1394::max_open_devices);
+
+FirewireDeviceLibraw1394::FirewireDeviceLibraw1394(u_int32_t port, u_int32_t node): port(port), node(node)
 {
-  // Checking wether the port is connected is done in getNumberOfNodes() already
-  return raw1394_get_nodecount(handles[port]);
+	if(number_of_open_devices == max_open_devices)
+	{
+		max_open_devices += 2;
+		open_devices = (FirewireDeviceLibraw1394**) realloc(open_devices, sizeof(FirewireDeviceLibraw1394**) * FirewireDeviceLibraw1394::max_open_devices);
+		// TODO Recover & throw error if failed
+	}
+	open_devices[number_of_open_devices] = this;
+	number_of_open_devices++;
+	handle = raw1394_new_handle_on_port(port);
+	// TODO throw error if failed
 }
 
-int CommunicationLibraw1394::read(unsigned int node, unsigned long address, char *buffer, unsigned int length)
+FirewireDeviceLibraw1394::~FirewireDeviceLibraw1394()
 {
-  if(port == -1)
-  {
-    // Port is not set for this instance, so it is not possible to communicate
-    // TODO Add some error indication (use errno?)
-    return 1;
-  }
-  return raw1394_read(handles[port], node, address, length, (quadlet_t *) buffer);
+	// 'Close' the current Firewire Device
+	number_of_open_devices--;
+	unsigned int i;
+	for(i = 0; i < number_of_open_devices; i++)
+		if(open_devices[i] == this)
+			break;
+	for(i++; i < number_of_open_devices; i++)
+		open_devices[i - 1] = open_devices[i];
+
+	raw1394_destroy_handle(handle);
 }
 
-int CommunicationLibraw1394::write(unsigned int node, unsigned long address, char *buffer, unsigned int length)
+bool FirewireDeviceLibraw1394::deviceIsOpen(u_int32_t port, u_int32_t node)
 {
-  if(port == -1)
-  {
-    // Port is not set for this instance, so it is not possible to communicate
-    // TODO Add some error indication (use errno?)
-    return 1;
-  }
-  return raw1394_write(handles[port], node, address, length, (quadlet_t *) buffer);
+	for(unsigned int i = 0; i < number_of_open_devices; i++)
+		if(open_devices[i]->port == port && open_devices[i]->node == node)
+			return true;
+	return false;
+}
+
+void FirewireDeviceLibraw1394::read(unsigned long address, char *buffer, unsigned int length)
+{
+	// TODO throw exception when an error occurred
+  raw1394_read(handle, node, address, length, (quadlet_t *) buffer);
+}
+
+void FirewireDeviceLibraw1394::write(unsigned long address, char *buffer, unsigned int length)
+{
+	// TODO throw exception when an error occurred
+  raw1394_write(handle, node, address, length, (quadlet_t *) buffer);
 }
