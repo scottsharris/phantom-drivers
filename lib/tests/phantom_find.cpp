@@ -29,45 +29,53 @@
 int main()
 {
   using namespace LibPhantom;
-  Phantom *list[MAX_PHANTOMS];
-  unsigned int devices_found = 0;
-  uint32_t serial = 0;
 
-  // Claim all PHANTOMS
-  Phantom *p;
-  while ((p = Phantom::findPhantom(0)) != 0)
+  try
   {
-    printf("Found a PHANTOM: %x\n", p->readDeviceSerial());
-    list[devices_found] = p;
-    serial = p->readDeviceSerial();
-    devices_found++;
+    Phantom *list[MAX_PHANTOMS];
+    unsigned int devices_found = 0;
+    uint32_t serial = 0;
+
+    // Claim all PHANTOMS
+    Phantom *p;
+    while ((p = Phantom::findPhantom(0)) != 0)
+    {
+      printf("Found a PHANTOM: %x\n", p->readDeviceSerial());
+      list[devices_found] = p;
+      serial = p->readDeviceSerial();
+      devices_found++;
+    }
+    if (devices_found == 0)
+      return 0; // Nothing fun to do...
+
+    // and release them again
+    while (devices_found > 0)
+    {
+      devices_found--;
+      delete list[devices_found];
+    }
+
+    // Find last PHANTOM again
+    p = Phantom::findPhantom(serial);
+    if (p == 0)
+    {
+      printf("Error: could not find last device again...\n");
+      return 1;
+    }
+
+    // Find last PHANTOM a second time
+    p = Phantom::findPhantom(serial);
+    if (p != 0)
+    {
+      printf("Error: could open a device twice...\n");
+      return 1;
+    }
   }
-  if (devices_found == 0)
-    return 0; // Nothing fun to do...
-
-  // and release them again
-  while (devices_found > 0)
+  catch (char const* str)
   {
-    devices_found--;
-    delete list[devices_found];
-  }
-
-  // Find last PHANTOM again
-  p = Phantom::findPhantom(serial);
-  if (p == 0)
-  {
-    printf("Error: could not find last device again...\n");
+    printf("Exception raised: %s\n", str);
     return 1;
   }
-
-  // Find last PHANTOM a second time
-  p = Phantom::findPhantom(serial);
-  if (p != 0)
-  {
-    printf("Error: could open a device twice...\n");
-    return 1;
-  }
-
   printf("Tests succeeded!\n");
   return 0;
 }

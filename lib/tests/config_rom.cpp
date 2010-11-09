@@ -31,52 +31,58 @@
 int main()
 {
   using namespace LibPhantom;
-
-  Communication *com = Communication::createInstance();
-
-  FirewireDevice *d;
-  DeviceIterator *i = com->getDevices();
-
-  int test1NumDevices = 0;
-  int test2NumDevices = 0;
-
-  printf("Test 1: finding devices, closing after use\n");
-  for (d = i->next(); d; d = i->next())
+  try
   {
-    printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
-    delete d;
-    test1NumDevices++;
+    Communication *com = Communication::createInstance();
+
+    FirewireDevice *d;
+    DeviceIterator *i = com->getDevices();
+
+    int test1NumDevices = 0;
+    int test2NumDevices = 0;
+
+    printf("Test 1: finding devices, closing after use\n");
+    for (d = i->next(); d; d = i->next())
+    {
+      printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
+      delete d;
+      test1NumDevices++;
+    }
+    if (test1NumDevices == 0)
+    {
+      printf("No device was found\n");
+      return 1;
+    }
+
+    printf("Test 2: finding devices, not closing after use\n");
+    i = com->getDevices();
+    for (d = i->next(); d; d = i->next())
+    {
+      printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
+      test2NumDevices++;
+    }
+    if (test1NumDevices != test2NumDevices)
+    {
+      printf("Number of devices changed\n");
+      return 1;
+    }
+
+    //Test: do deliberately *not* delete the devices, they should not be found again!
+
+    printf("Test 3: finding devices, even though all should be open\n");
+    i = com->getDevices();
+    for (d = i->next(); d; d = i->next())
+    {
+      printf("A device could be opened twice\n");
+      return 1;
+    }
+    delete i;
   }
-  if (test1NumDevices == 0)
+  catch (char const* str)
   {
-    printf("No device was found\n");
+    printf("Exception raised: %s\n", str);
     return 1;
   }
-
-  printf("Test 2: finding devices, not closing after use\n");
-  i = com->getDevices();
-  for (d = i->next(); d; d = i->next())
-  {
-    printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
-    test2NumDevices++;
-  }
-  if (test1NumDevices != test2NumDevices)
-  {
-    printf("Number of devices changed\n");
-    return 1;
-  }
-
-  //Test: do deliberately *not* delete the devices, they should not be found again!
-
-  printf("Test 3: finding devices, even though all should be open\n");
-  i = com->getDevices();
-  for (d = i->next(); d; d = i->next())
-  {
-    printf("A device could be opened twice\n");
-    return 1;
-  }
-  delete i;
-
   printf("Tests succeeded!\n");
   return 0;
 }

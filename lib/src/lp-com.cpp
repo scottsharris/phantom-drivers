@@ -294,9 +294,8 @@ void FirewireDevice::readConfigRom()
       //TODO: fix this memory leak (if a device is deleted or if the next read fails)
       configRom.vendor = new char[len];
 
-      addr += 12; // 4 + 8 (Skip language_specifier_id and langude_id)
+      addr += 12; // 4 (length field) + 8 (Skip language_specifier_id and langude_id)
       read(addr, configRom.vendor, len);
-
     }
   }
   configRomValid = true;
