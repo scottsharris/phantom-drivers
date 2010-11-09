@@ -15,9 +15,9 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- /*
-  * Phantom Library Communications: generic header file for communication over firewire
-  */
+/*
+ * Phantom Library Communications: generic header file for communication over firewire
+ */
 
 #pragma once
 
@@ -25,37 +25,39 @@
 
 namespace LibPhantom
 {
-//TODO Take a look at the fields and remove the ones which do not influence finding PHANTOM devices (ie vendor name)
+  //TODO Take a look at the fields and remove the ones which do not influence finding PHANTOM devices (ie vendor name)
 
-struct config_rom {
-  unsigned char motu_fw_audio:1;
-  unsigned char irm_cap:1;
-  unsigned char cycle_master_cap:1;
-  unsigned char iso_cap:1;
-  unsigned char bus_manager_cap:1;
-  unsigned char cycle_clk_accuracy;
-  unsigned int max_async_bwrite_payload;
-  unsigned int link_speed;
-  union
+  struct config_rom
   {
-    struct {
-      u_int32_t guid_lo;
-      u_int32_t guid_hi;
+    unsigned char motu_fw_audio :1;
+    unsigned char irm_cap :1;
+    unsigned char cycle_master_cap :1;
+    unsigned char iso_cap :1;
+    unsigned char bus_manager_cap :1;
+    unsigned char cycle_clk_accuracy;
+    unsigned int max_async_bwrite_payload;
+    unsigned int link_speed;
+    union
+    {
+      struct
+      {
+        u_int32_t guid_lo;
+        u_int32_t guid_hi;
+      };
+      u_int64_t guid;
     };
-    u_int64_t guid;
+    u_int32_t node_capabilities;
+    u_int32_t vendor_id;
+    u_int32_t unit_spec_id;
+    u_int32_t unit_sw_version;
+    u_int32_t model_id;
+
+    char *vendor;
+
   };
-  u_int32_t node_capabilities;
-  u_int32_t vendor_id;
-  u_int32_t unit_spec_id;
-  u_int32_t unit_sw_version;
-  u_int32_t model_id;
 
-  char *vendor;
-
-};
-
-	class DeviceIterator;
-	class FirewireDevice;
+  class DeviceIterator;
+  class FirewireDevice;
 
   /**
    * Defines the communication methods to the firewire device (independent of the underlying library/driver)
@@ -63,28 +65,30 @@ struct config_rom {
    * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class, 
    * this function will return the correct underlying instance.
    */
-	class Communication
-	{
-	public:
-	  /**
-	   * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
-	   */
-	  static Communication* createInstance();
-
-	  Communication();
-	  virtual ~Communication();
-	  virtual DeviceIterator* getDevices()=0;
-	};
-
-	class DeviceIterator {
-	public:
-		virtual FirewireDevice* next()=0;
-	};
-
-  class FirewireDevice {
+  class Communication
+  {
   public:
-	FirewireDevice();
-	virtual ~FirewireDevice();
+    /**
+     * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
+     */
+    static Communication* createInstance();
+
+    Communication();
+    virtual ~Communication();
+    virtual DeviceIterator* getDevices()=0;
+  };
+
+  class DeviceIterator
+  {
+  public:
+    virtual FirewireDevice* next()=0;
+  };
+
+  class FirewireDevice
+  {
+  public:
+    FirewireDevice();
+    virtual ~FirewireDevice();
     /**
      * Read data from given address
      */
@@ -122,8 +126,6 @@ struct config_rom {
 
 
   };
-
-
 
 }
 

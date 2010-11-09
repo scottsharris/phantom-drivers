@@ -19,7 +19,8 @@
 
 using namespace LibPhantom;
 
-BaseDevice::BaseDevice(FirewireDevice *fw) : firewireDevice(fw)
+BaseDevice::BaseDevice(FirewireDevice *fw) :
+  firewireDevice(fw)
 {
 }
 
@@ -27,5 +28,4 @@ BaseDevice::~BaseDevice()
 {
   delete firewireDevice;
 }
-
 

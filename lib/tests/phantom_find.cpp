@@ -15,9 +15,9 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- /*
-  * Test application to test the Phantom::findPhantom() functionality
-  */
+/*
+ * Test application to test the Phantom::findPhantom() functionality
+ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -35,18 +35,18 @@ int main()
 
   // Claim all PHANTOMS
   Phantom *p;
-  while((p = Phantom::findPhantom(0)) != 0)
+  while ((p = Phantom::findPhantom(0)) != 0)
   {
     printf("Found a PHANTOM: %x\n", p->readDeviceSerial());
     list[devices_found] = p;
     serial = p->readDeviceSerial();
     devices_found++;
   }
-  if(devices_found == 0)
+  if (devices_found == 0)
     return 0; // Nothing fun to do...
 
   // and release them again
-  while(devices_found > 0)
+  while (devices_found > 0)
   {
     devices_found--;
     delete list[devices_found];
@@ -54,7 +54,7 @@ int main()
 
   // Find last PHANTOM again
   p = Phantom::findPhantom(serial);
-  if(p == 0)
+  if (p == 0)
   {
     printf("Error: could not find last device again...\n");
     return 1;
@@ -62,7 +62,7 @@ int main()
 
   // Find last PHANTOM a second time
   p = Phantom::findPhantom(serial);
-  if(p != 0)
+  if (p != 0)
   {
     printf("Error: could open a device twice...\n");
     return 1;

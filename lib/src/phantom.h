@@ -50,8 +50,6 @@ namespace LibPhantom
      */
     Phantom(FirewireDevice *fw);
 
-
-
     /**
      * @return serial id (read directly from device memory) or 0 when something went wrong
      */

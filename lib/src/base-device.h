@@ -25,10 +25,10 @@ namespace LibPhantom
   class BaseDevice
   {
   public:
-	/**
-	 * Reference to the FirewireDevice is consumed (i.e. the object is deleted
-	 * upon destruction of the BaseDevice
-	 */
+    /**
+     * Reference to the FirewireDevice is consumed (i.e. the object is deleted
+     * upon destruction of the BaseDevice
+     */
     BaseDevice(FirewireDevice *fw);
     virtual ~BaseDevice();
 

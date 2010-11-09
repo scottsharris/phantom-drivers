@@ -15,16 +15,15 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- #include <stdlib.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "phantom.h"
 
 using namespace LibPhantom;
 
-
-
-Phantom::Phantom(FirewireDevice *fw) : BaseDevice(fw)
+Phantom::Phantom(FirewireDevice *fw) :
+  BaseDevice(fw)
 {
 
 }
@@ -48,24 +47,25 @@ Phantom* Phantom::findPhantom(unsigned int serial)
 
   Communication *com = Communication::createInstance();
 
-
   FirewireDevice *dev;
-  DeviceIterator *i=com->getDevices();
+  DeviceIterator *i = com->getDevices();
 
-  for(dev=i->next();dev;dev=i->next()) {
+  for (dev = i->next(); dev; dev = i->next())
+  {
     //printf("Device -> vendor: 0x%6.6x %s\n", dev->getVendorId(), dev->getVendorName());
-    if(dev->isSensableDevice()) {
-    	uint32_t device_serial = readDeviceSerial(dev);
-    	//printf("Serial %d\n",device_serial);
-    	if(serial != 0 && serial != device_serial)
-    	{
-    	  delete dev;
-    	  continue;
-    	}
+    if (dev->isSensableDevice())
+    {
+      uint32_t device_serial = readDeviceSerial(dev);
+      //printf("Serial %d\n",device_serial);
+      if (serial != 0 && serial != device_serial)
+      {
+        delete dev;
+        continue;
+      }
 
-    	//We have found a Phantom device
-    	delete i;
-    	return new Phantom(dev);
+      //We have found a Phantom device
+      delete i;
+      return new Phantom(dev);
 
     }
 
@@ -76,8 +76,6 @@ Phantom* Phantom::findPhantom(unsigned int serial)
   // We failed to find a(n unused) Phantom device...
   return 0;
 }
-
-
 
 uint32_t Phantom::readDeviceSerial()
 {

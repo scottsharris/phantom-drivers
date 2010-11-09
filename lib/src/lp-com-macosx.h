@@ -15,9 +15,9 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- /*
-  * Phantom Library Communications: FireWire communication driver for Mac OS X
-  */
+/*
+ * Phantom Library Communications: FireWire communication driver for Mac OS X
+ */
 
 #pragma once
 
@@ -32,46 +32,45 @@ namespace LibPhantom
   class DeviceIteratorMacOSX;
   class FirewireDeviceMacOSX;
 
-
   /**
    * Defines the communication methods to the firewire device (independent of the underlying library/driver)
    *
    * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class,
    * this function will return the correct underlying instance.
    */
-  class CommunicationMacOSX:public Communication
+  class CommunicationMacOSX : public Communication
   {
   public:
-     CommunicationMacOSX();
+    CommunicationMacOSX();
     ~CommunicationMacOSX();
     DeviceIterator *getDevices();
 
   };
 
-
-  class DeviceIteratorMacOSX:public DeviceIterator {
-  public: //TODO: friend??
-	  DeviceIteratorMacOSX();
+  class DeviceIteratorMacOSX : public DeviceIterator
+  {
   public:
-	  FirewireDevice* next();
+    //TODO: friend??
+    DeviceIteratorMacOSX();
+  public:
+    FirewireDevice* next();
   private:
-	  io_iterator_t deviceIterator;
-	  io_iterator_t unitIterator;
+    io_iterator_t deviceIterator;
+    io_iterator_t unitIterator;
 
   };
 
+  class FirewireDeviceMacOSX : public FirewireDevice
+  {
+  public:
+    //TODO: friend??
+    FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface);
+    ~FirewireDeviceMacOSX();
+    void read(unsigned long address, char *buffer, unsigned int length);
+    void write(unsigned long address, char *buffer, unsigned int length);
 
-  class FirewireDeviceMacOSX: public FirewireDevice {
-public: //TODO: friend??
-	  FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface);
-	  ~FirewireDeviceMacOSX();
-	  void read(unsigned long address, char *buffer, unsigned int length);
-	  void write(unsigned long address, char *buffer, unsigned int length);
-
-
-
-private:
-	  IOFireWireLibDeviceRef interface;
+  private:
+    IOFireWireLibDeviceRef interface;
 
   };
 }
