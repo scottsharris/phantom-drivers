@@ -29,13 +29,15 @@
 // Depending on which FW_METHOD is selected, add header file for static implementations
 #ifdef USE_libraw1394
 #include "lp-com-libraw1394.h"
+#include "libraw1394/csr.h"
 #endif
 #ifdef USE_macosx
 #include "lp-com-macosx.h"
+#define CSR_REGISTER_BASE  0xfffff0000000ULL
+#define CSR_CONFIG_ROM 0x400
 #endif
 
-#define CSR_REGISTER_BASE  0xfffff0000000ULL
-#define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400
+#define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + CSR_CONFIG_ROM
 
 using namespace LibPhantom;
 
@@ -116,7 +118,7 @@ void FirewireDevice::readConfigRom()
   unsigned int i;
 
   u_int32_t quadlet;
-  unsigned long addr = CONFIG_ROM_ADDR;
+  u_int64_t addr = CONFIG_ROM_ADDR;
 
   memset(&configRom, 0, sizeof(struct config_rom));
 
@@ -135,7 +137,7 @@ void FirewireDevice::readConfigRom()
   else
   {
     unsigned int len, value;
-    unsigned int unit_dir_addr = 0, textual_leaf_addr = 0;
+    u_int64_t unit_dir_addr = 0, textual_leaf_addr = 0;
 
     /* First data quadlet of bus info block in config ROM */
     addr += 4;
