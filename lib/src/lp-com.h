@@ -140,9 +140,6 @@ namespace LibPhantom
     struct config_rom configRom;
     bool configRomRead; //Did we try to read the config ROM?
     bool configRomValid; //Did we successfully read the config ROM?
-
-
   };
-
 }
 

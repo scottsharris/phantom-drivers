@@ -42,9 +42,34 @@ namespace LibPhantom
     /**
      * @return serial id (read directly from device memory) or 0 when something went wrong
      */
-    virtual uint32_t readDeviceSerial();
+    uint32_t readDeviceSerial();
+
+    /**
+     * Starts the communication with the phantom
+     */
+    void startPhantom();
+
+    /**
+     * Stops the communication with the phantom
+     */
+    void stopPhantom();
 
   protected:
+    /**
+     * When true, isochronous communication is enabled (ie the device is started)
+     */
+    bool started;
+
+    /**
+     * Transmit isochronous channel
+     */
+    unsigned int xmit_channel;
+
+    /**
+     * Receive isochronous channel
+     */
+    unsigned int recv_channel;
+
     /**
      * Do no use constructor directly, but use findPhantom() functionalities.
      */

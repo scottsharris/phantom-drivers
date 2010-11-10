@@ -16,11 +16,10 @@
  */
 
 /*
- * Test application to test the Phantom::findPhantom() functionality
+ * Test application to test the isochronous channel functionality
  */
 
 #include <stdio.h>
-#include <sys/types.h>
 
 #include "lp-com.h"
 

@@ -111,11 +111,15 @@ namespace LibPhantom
     void write(u_int64_t address, char *buffer, unsigned int length);
 
     /**
+     * Returns the port to which the device is connected to
+     */
+    u_int32_t getPort();
+
+    /**
      * @return true if the device on the given port and node is in use (open) already
      */
     static bool deviceIsOpen(u_int32_t port, nodeid_t node);
   protected:
-
     /**
      * Handle connected to the port given at the constructor
      */

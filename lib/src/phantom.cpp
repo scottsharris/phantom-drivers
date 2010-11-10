@@ -23,7 +23,7 @@
 using namespace LibPhantom;
 
 Phantom::Phantom(FirewireDevice *fw) :
-  BaseDevice(fw)
+  BaseDevice(fw), started(false)
 {
 
 }
@@ -31,7 +31,7 @@ Phantom::Phantom(FirewireDevice *fw) :
 Phantom::~Phantom()
 {
   // TODO Remove callback handler(s)
-
+  stopPhantom();
 }
 
 Phantom* Phantom::findPhantom()
@@ -66,7 +66,6 @@ Phantom* Phantom::findPhantom(unsigned int serial)
       //We have found a Phantom device
       delete i;
       return new Phantom(dev);
-
     }
 
     delete dev;
@@ -88,4 +87,30 @@ uint32_t Phantom::readDeviceSerial(FirewireDevice *firewireDevice)
   // For a PHANTOM Omni this address can be read to obtain the serial/unique number
   firewireDevice->read(0x10060010, (char *) &serial, 4);
   return serial;
+}
+
+void Phantom::startPhantom()
+{
+  if (started)
+  {
+    throw "This phantom device is already started";
+  }
+  started = true;
+
+  xmit_channel = firewireDevice->getFreeChannel();
+  firewireDevice->claimChannel(xmit_channel);
+  recv_channel = firewireDevice->getFreeChannel();
+  firewireDevice->claimChannel(recv_channel);
+}
+
+void Phantom::stopPhantom()
+{
+  if (!started)
+  {
+    return;
+  }
+  started = false;
+
+  firewireDevice->releaseChannel(xmit_channel);
+  firewireDevice->releaseChannel(recv_channel);
 }

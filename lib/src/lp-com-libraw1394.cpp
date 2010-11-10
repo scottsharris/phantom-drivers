@@ -206,6 +206,11 @@ void FirewireDeviceLibraw1394::releaseChannel(unsigned int channel)
   }
 }
 
+u_int32_t FirewireDeviceLibraw1394::getPort()
+{
+  return port;
+}
+
 void FirewireDeviceLibraw1394::read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
 {
   if (raw1394_read(handle, node | 0xffc0, address, length, (quadlet_t *) buffer))
