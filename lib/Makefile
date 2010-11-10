@@ -5,7 +5,7 @@ CFLAGS?=-Wall -O0 -g
 CFLAGS+=-DUSE_$(FW_METHOD)
 
 FILES:= lp-com.cpp base-device.cpp phantom.cpp
-TEST_APPS:= config_rom phantom_find
+TEST_APPS:= config_rom phantom_find iso_channel
 
 ifeq ($(FW_METHOD),libraw1394)
   FILES+=lp-com-libraw1394.cpp

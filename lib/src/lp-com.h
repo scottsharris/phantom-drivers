@@ -89,23 +89,40 @@ namespace LibPhantom
   public:
     FirewireDevice();
     virtual ~FirewireDevice();
+
+    /**
+     * @return the first free isochronous channel available
+     * @throws some exception if not free channels are available
+     */
+    virtual unsigned int getFreeChannel() = 0;
+
+    /**
+     * Claims the given isochronous channel, which can be found using getFreeChannel().
+     */
+    virtual void claimChannel(unsigned int channel) = 0;
+
+    /**
+     * Releases the given isochronous channel.
+     */
+    virtual void releaseChannel(unsigned int channel) = 0;
+
     /**
      * Read data from given address
      */
-    virtual void read(unsigned long address, char *buffer, unsigned int length) = 0;
+    virtual void read(u_int64_t address, char *buffer, unsigned int length) = 0;
 
     /**
      * Write data to given address
      */
-    virtual void write(unsigned long address, char *buffer, unsigned int length) = 0;
+    virtual void write(u_int64_t address, char *buffer, unsigned int length) = 0;
 
     /**
-     * @returns the vendor id of the device
+     * @return the vendor id of the device
      */
     unsigned int getVendorId();
 
     /**
-     * @returns the name of the vendor if it is supplied in the ROM of the device, or 0 when an error occurred (ie the name is not available)
+     * @return the name of the vendor if it is supplied in the ROM of the device, or 0 when an error occurred (ie the name is not available)
      */
     char *getVendorName();
 
@@ -115,7 +132,7 @@ namespace LibPhantom
     bool isSensableDevice();
 
     /**
-     * @returns the config rom struct. Do not use directly, but use getters (eg getVendorId())
+     * @return the config rom struct. Do not use directly, but use getters (eg getVendorId())
      */
     struct config_rom* getConfigRom();
   private:

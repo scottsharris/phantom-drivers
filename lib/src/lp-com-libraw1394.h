@@ -89,18 +89,45 @@ namespace LibPhantom
   {
   public:
     //TODO: friend??
-    FirewireDeviceLibraw1394(u_int32_t port, u_int32_t node);
+    FirewireDeviceLibraw1394(u_int32_t port, nodeid_t node);
     ~FirewireDeviceLibraw1394();
-    void read(unsigned long address, char *buffer, unsigned int length);
-    void write(unsigned long address, char *buffer, unsigned int length);
 
-    static bool deviceIsOpen(u_int32_t port, u_int32_t node);
+    unsigned int getFreeChannel();
+    void claimChannel(unsigned int channel);
+    void releaseChannel(unsigned int channel);
+
+    /**
+     * Reads from given node
+     */
+    void read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
+
+    void read(u_int64_t address, char *buffer, unsigned int length);
+
+    /**
+     * Writes to given node
+     */
+    void write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
+
+    void write(u_int64_t address, char *buffer, unsigned int length);
+
+    /**
+     * @return true if the device on the given port and node is in use (open) already
+     */
+    static bool deviceIsOpen(u_int32_t port, nodeid_t node);
   protected:
 
+    /**
+     * Handle connected to the port given at the constructor
+     */
     raw1394_handle *handle;
 
     u_int32_t port;
-    u_int32_t node;
+    nodeid_t node;
+
+    /**
+     * Isochronous Resource Manager, ie the node which manages the isochronous communication
+     */
+    nodeid_t irm_node;
 
     static unsigned int max_open_devices;
     static unsigned int number_of_open_devices;
