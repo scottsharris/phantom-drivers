@@ -56,6 +56,8 @@ namespace LibPhantom
 
   };
 
+  class Communication;
+
   class FirewireDevice
   {
   public:
@@ -79,14 +81,14 @@ namespace LibPhantom
     virtual void releaseChannel(unsigned int channel) = 0;
 
     /**
-     * Read data from given address
+     * Read data from current device at given address
      */
-    virtual void read(u_int64_t address, char *buffer, unsigned int length) = 0;
+    void read(u_int64_t address, char *buffer, unsigned int length);
 
     /**
-     * Write data to given address
+     * Write data current device to given address
      */
-    virtual void write(u_int64_t address, char *buffer, unsigned int length) = 0;
+    void write(u_int64_t address, char *buffer, unsigned int length);
 
     /**
      * @return the vendor id of the device
@@ -107,7 +109,9 @@ namespace LibPhantom
      * @return the config rom struct. Do not use directly, but use getters (eg getVendorId())
      */
     struct config_rom* getConfigRom();
-  private:
+  protected:
+    Communication *com;
+
     void readConfigRom();
     struct config_rom configRom;
     bool configRomRead; //Did we try to read the config ROM?

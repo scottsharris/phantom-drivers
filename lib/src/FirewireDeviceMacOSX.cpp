@@ -36,19 +36,7 @@ FirewireDeviceMacOSX::~FirewireDeviceMacOSX()
   (*interface)->Close(interface);
 }
 
-void FirewireDeviceMacOSX::read(unsigned long address, char *buffer, unsigned int length)
+IOFireWireLibDeviceRef FirewireDeviceMacOSX::getInterface()
 {
-  FWAddress full_addr;
-
-  full_addr.addressHi = address >> 32;
-  full_addr.addressLo = address & 0xffffffff;
-
-  (*interface)->Read(interface, (*interface)->GetDevice(interface), &full_addr, buffer, &length, false, 0);
-
+  return interface;
 }
-
-void FirewireDeviceMacOSX::write(unsigned long address, char *buffer, unsigned int length)
-{
-
-}
-

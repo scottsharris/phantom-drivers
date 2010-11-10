@@ -34,9 +34,14 @@ namespace LibPhantom
   class CommunicationMacOSX : public Communication
   {
   public:
-    CommunicationMacOSX();
+    CommunicationMacOSX(IOFireWireLibDeviceRef interface);
     ~CommunicationMacOSX();
-    DeviceIterator *getDevices();
+
+    virtual void read(u_int64_t address, char *buffer, unsigned int length);
+    virtual void write(u_int64_t address, char *buffer, unsigned int length);
+
+  protected:
+    IOFireWireLibDeviceRef interface;
   };
 }
 

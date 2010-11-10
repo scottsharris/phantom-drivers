@@ -27,6 +27,7 @@
 #include "libraw1394/csr.h"
 
 #include "FirewireDeviceLibraw1394.h"
+#include "CommunicationLibraw1394.h"
 
 #define CHANNELS_AVAILABLE_ADDR    CSR_REGISTER_BASE + CSR_CHANNELS_AVAILABLE_HI
 
@@ -86,7 +87,7 @@ unsigned int FirewireDeviceLibraw1394::getFreeChannel()
   int i;
   octlet_t channels;
   quadlet_t *channelsq = (quadlet_t *) &channels;
-  read(irm_node, CHANNELS_AVAILABLE_ADDR, (char *) &channels, sizeof(octlet_t));
+  ((CommunicationLibraw1394 *) com)->read(irm_node, CHANNELS_AVAILABLE_ADDR, (char *) &channels, sizeof(octlet_t));
 
   // Convert to a more convenient order
   for (i = 0; i < 2; i++)
@@ -128,42 +129,7 @@ u_int32_t FirewireDeviceLibraw1394::getPort()
   return port;
 }
 
-void FirewireDeviceLibraw1394::read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
+nodeid_t FirewireDeviceLibraw1394::getNode()
 {
-  if (raw1394_read(handle, node | 0xffc0, address, length, (quadlet_t *) buffer))
-  {
-    if (errno != EAGAIN)
-    {
-      // TODO Create some library exception and throw that one
-      char *buffer = new char[256];
-      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
-          errno));
-      throw buffer;
-    }
-  }
-}
-
-void FirewireDeviceLibraw1394::read(u_int64_t address, char *buffer, unsigned int length)
-{
-  read(node, address, buffer, length);
-}
-
-void FirewireDeviceLibraw1394::write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
-{
-  if (raw1394_write(handle, node, address, length, (quadlet_t *) buffer))
-  {
-    if (errno != EAGAIN)
-    {
-      // TODO Create some library exception and throw that one
-      char *buffer = new char[256];
-      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
-          errno));
-      throw buffer;
-    }
-  }
-}
-
-void FirewireDeviceLibraw1394::write(u_int64_t address, char *buffer, unsigned int length)
-{
-  write(node, address, buffer, length);
+  return node;
 }

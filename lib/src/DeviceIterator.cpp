@@ -18,3 +18,26 @@
 /*
  * Phantom Library: iterator to iterate over FirewireDevices
  */
+
+#include "DeviceIterator.h"
+
+// Depending on which FW_METHOD is selected, add header file for static implementations
+#ifdef USE_libraw1394
+#include "DeviceIteratorLibraw1394.h"
+#endif
+#ifdef USE_macosx
+#include "DeviceIteratorMacOSX.h"
+#endif
+
+using namespace LibPhantom;
+
+DeviceIterator* DeviceIterator::createInstance()
+{
+#ifdef USE_libraw1394
+  return new DeviceIteratorLibraw1394;
+#endif
+#ifdef USE_macosx
+  return new DeviceIteratorMacOSX;
+#endif
+  throw "Unknown FW_METHOD used";
+}

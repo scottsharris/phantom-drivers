@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "Communication.h"
+#include "DeviceIterator.h"
 
 #define CSR_REGISTER_BASE  0xfffff0000000ULL
 #define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400
@@ -33,10 +34,8 @@ int main()
   using namespace LibPhantom;
   try
   {
-    Communication *com = Communication::createInstance();
-
+    DeviceIterator *i = DeviceIterator::createInstance();
     FirewireDevice *d;
-    DeviceIterator *i = com->getDevices();
 
     int test1NumDevices = 0;
     int test2NumDevices = 0;
@@ -55,7 +54,7 @@ int main()
     }
 
     printf("Test 2: finding devices, not closing after use\n");
-    i = com->getDevices();
+    i = DeviceIterator::createInstance();
     for (d = i->next(); d; d = i->next())
     {
       printf("Device -> vendor: 0x%6.6x %s\n", d->getVendorId(), d->getVendorName());
@@ -70,7 +69,7 @@ int main()
     //Test: do deliberately *not* delete the devices, they should not be found again!
 
     printf("Test 3: finding devices, even though all should be open\n");
-    i = com->getDevices();
+    i = DeviceIterator::createInstance();
     for (d = i->next(); d; d = i->next())
     {
       printf("A device could be opened twice\n");

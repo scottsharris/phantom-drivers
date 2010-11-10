@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 #include "Communication.h"
+#include "DeviceIterator.h"
 
 int main()
 {
@@ -32,14 +33,13 @@ int main()
     // These test assumes that findChannel finds the first free channel available
     // if it just find any free channel available the test might not pass
 
-    Communication *com = Communication::createInstance();
-
-    DeviceIterator *it = com->getDevices();
+    DeviceIterator *it = DeviceIterator::createInstance();
     FirewireDevice *dev = it->next();
+
     delete it;
     if (dev == 0)
     {
-      printf("Could not find any firewire devices...");
+      printf("Could not find any firewire devices...\n");
       return 1;
     }
 
@@ -65,7 +65,7 @@ int main()
     unsigned int channel3 = dev->getFreeChannel();
     if (channel != channel3)
     {
-      printf("Channel %d is still marked as claimed...", channel);
+      printf("Channel %d is still marked as claimed...\n", channel);
       return 1;
     }
     printf("Found next free channel: %d\n", channel3);

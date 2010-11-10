@@ -19,7 +19,7 @@
  * Phantom Library: implementation of Phantom functionality
  */
 
-#include "Communication.h"
+#include "DeviceIterator.h"
 #include "Phantom.h"
 
 using namespace LibPhantom;
@@ -44,13 +44,10 @@ Phantom* Phantom::findPhantom()
 // If serial is 0, any Phantom device will suffice
 Phantom* Phantom::findPhantom(unsigned int serial)
 {
-
   // TODO Cache the Phantom devices and recreate list upon bus resets (much more efficient, assuming that it does not take too much resources to create the list...)
 
-  Communication *com = Communication::createInstance();
-
   FirewireDevice *dev;
-  DeviceIterator *i = com->getDevices();
+  DeviceIterator *i = DeviceIterator::createInstance();
 
   for (dev = i->next(); dev; dev = i->next())
   {

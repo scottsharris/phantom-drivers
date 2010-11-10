@@ -25,9 +25,11 @@
 // Depending on which FW_METHOD is selected, add header file for static implementations
 #ifdef USE_libraw1394
 #include "CommunicationLibraw1394.h"
+#include "FirewireDeviceLibraw1394.h"
 #endif
 #ifdef USE_macosx
 #include "CommunicationMacOSX.h"
+#include "FirewireDeviceMacOSX.h"
 #endif
 
 using namespace LibPhantom;
@@ -40,13 +42,15 @@ Communication::~Communication()
 {
 }
 
-Communication* Communication::createInstance()
+Communication* Communication::createInstance(FirewireDevice *firewireDevice)
 {
 #ifdef USE_libraw1394
-  return new CommunicationLibraw1394;
+  FirewireDeviceLibraw1394* device = (FirewireDeviceLibraw1394*) firewireDevice;
+  return new CommunicationLibraw1394(device->getPort(), device->getNode());
 #endif
 #ifdef USE_macosx
-  return new CommunicationMacOSX;
+  FirewireDeviceMacOSX* device = (FirewireDeviceMacOSX*) firewireDevice;
+  return new CommunicationMacOSX(device->getInterface());
 #endif
-  return NULL;
+  throw "Unknown FW_METHOD used";
 }

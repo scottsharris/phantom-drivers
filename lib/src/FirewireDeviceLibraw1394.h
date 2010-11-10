@@ -41,23 +41,14 @@ namespace LibPhantom
     void releaseChannel(unsigned int channel);
 
     /**
-     * Reads from given node
-     */
-    void read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
-
-    void read(u_int64_t address, char *buffer, unsigned int length);
-
-    /**
-     * Writes to given node
-     */
-    void write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
-
-    void write(u_int64_t address, char *buffer, unsigned int length);
-
-    /**
      * Returns the port to which the device is connected to
      */
     u_int32_t getPort();
+
+    /**
+     * Returns the node to which the device is connected to
+     */
+    nodeid_t getNode();
 
     /**
      * @return true if the device on the given port and node is in use (open) already

@@ -24,6 +24,7 @@
 #include <netinet/in.h>
 
 #include "FirewireDevice.h"
+#include "Communication.h"
 
 // Depending on which FW_METHOD is selected, add header file for static implementations
 #ifdef USE_libraw1394
@@ -41,11 +42,12 @@ using namespace LibPhantom;
 FirewireDevice::FirewireDevice() :
   configRomRead(false), configRomValid(false)
 {
+  com = Communication::createInstance(this);
 }
 
 FirewireDevice::~FirewireDevice()
 {
-
+  delete com;
 }
 
 unsigned int FirewireDevice::getVendorId()
@@ -277,4 +279,14 @@ void FirewireDevice::readConfigRom()
     }
   }
   configRomValid = true;
+}
+
+void FirewireDevice::read(u_int64_t address, char *buffer, unsigned int length)
+{
+	com->read(address, buffer, length);
+}
+
+void FirewireDevice::write(u_int64_t address, char *buffer, unsigned int length)
+{
+	com->write(address, buffer, length);
 }

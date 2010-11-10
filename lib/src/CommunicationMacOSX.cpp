@@ -23,7 +23,8 @@
 
 using namespace LibPhantom;
 
-CommunicationMacOSX::CommunicationMacOSX()
+CommunicationMacOSX::CommunicationMacOSX(IOFireWireLibDeviceRef interface) :
+  interface(interface)
 {
 
 }
@@ -33,8 +34,18 @@ CommunicationMacOSX::~CommunicationMacOSX()
 
 }
 
-DeviceIterator *CommunicationMacOSX::getDevices()
+void CommunicationMacOSX::read(unsigned long address, char *buffer, unsigned int length)
 {
-  return new DeviceIteratorMacOSX();
+  FWAddress full_addr;
+
+  full_addr.addressHi = address >> 32;
+  full_addr.addressLo = address & 0xffffffff;
+
+  (*interface)->Read(interface, (*interface)->GetDevice(interface), &full_addr, buffer, &length, false, 0);
+
+}
+
+void CommunicationMacOSX::write(unsigned long address, char *buffer, unsigned int length)
+{
 
 }

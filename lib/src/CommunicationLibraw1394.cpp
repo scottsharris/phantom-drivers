@@ -19,20 +19,62 @@
  * Phantom Library: FireWire communication driver for libraw1394
  */
 
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+
 #include "CommunicationLibraw1394.h"
 #include "DeviceIteratorLibraw1394.h"
 
 using namespace LibPhantom;
 
-CommunicationLibraw1394::CommunicationLibraw1394()
+CommunicationLibraw1394::CommunicationLibraw1394(unsigned int port, nodeid_t node) :
+  node(node)
 {
+  handle = raw1394_new_handle_on_port(port);
 }
 
 CommunicationLibraw1394::~CommunicationLibraw1394()
 {
+  raw1394_destroy_handle(handle);
 }
 
-DeviceIterator *CommunicationLibraw1394::getDevices()
+void CommunicationLibraw1394::read(u_int64_t address, char *buffer, unsigned int length)
 {
-  return new DeviceIteratorLibraw1394();
+  read(node, address, buffer, length);
+}
+
+void CommunicationLibraw1394::read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
+{
+  if (raw1394_read(handle, node | 0xffc0, address, length, (quadlet_t *) buffer))
+  {
+    if (errno != EAGAIN)
+    {
+      // TODO Create some library exception and throw that one
+      char *buffer = new char[256];
+      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
+          errno));
+      throw buffer;
+    }
+  }
+}
+
+void CommunicationLibraw1394::write(u_int64_t address, char *buffer, unsigned int length)
+{
+  write(node, address, buffer, length);
+}
+
+void CommunicationLibraw1394::write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
+{
+  if (raw1394_write(handle, node, address, length, (quadlet_t *) buffer))
+  {
+    if (errno != EAGAIN)
+    {
+      // TODO Create some library exception and throw that one
+      char *buffer = new char[256];
+      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
+          errno));
+      throw buffer;
+    }
+  }
 }

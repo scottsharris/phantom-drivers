@@ -28,6 +28,7 @@ namespace LibPhantom
   class DeviceIterator
   {
   public:
+    static DeviceIterator *createInstance();
     virtual FirewireDevice* next()=0;
   };
 }

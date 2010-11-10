@@ -21,11 +21,13 @@
 
 #pragma once
 
-#include <stdint.h>
-#include "DeviceIterator.h"
+#include <sys/types.h>
+
 
 namespace LibPhantom
 {
+  class FirewireDevice;
+
   /**
    * Defines the communication methods to the firewire device (independent of the underlying library/driver)
    *
@@ -38,9 +40,11 @@ namespace LibPhantom
     /**
      * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
      */
-    static Communication* createInstance();
+    static Communication* createInstance(FirewireDevice *firewireDevice);
     virtual ~Communication();
-    virtual DeviceIterator* getDevices()=0;
+
+    virtual void read(u_int64_t address, char *buffer, unsigned int length)=0;
+    virtual void write(u_int64_t address, char *buffer, unsigned int length)=0;
 
   protected:
     Communication();

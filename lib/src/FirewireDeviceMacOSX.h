@@ -40,6 +40,8 @@ namespace LibPhantom
     void read(unsigned long address, char *buffer, unsigned int length);
     void write(unsigned long address, char *buffer, unsigned int length);
 
+    IOFireWireLibDeviceRef getInterface();
+
   private:
     IOFireWireLibDeviceRef interface;
 

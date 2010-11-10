@@ -36,9 +36,18 @@ namespace LibPhantom
   class CommunicationLibraw1394 : public Communication
   {
   public:
-    CommunicationLibraw1394();
+    CommunicationLibraw1394(unsigned int port, nodeid_t node);
     ~CommunicationLibraw1394();
-    DeviceIterator *getDevices();
+
+    virtual void read(u_int64_t address, char *buffer, unsigned int length);
+    void read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
+
+    virtual void write(u_int64_t address, char *buffer, unsigned int length);
+    void write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
+  protected:
+
+    nodeid_t node;
+    raw1394_handle *handle;
   };
 }
 
