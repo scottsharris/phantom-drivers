@@ -16,30 +16,13 @@
  */
 
 /*
- * Phantom Library Communications: FireWire communication driver for Mac OS X
+ * Phantom Library: iterator to iterate over FirewireDevices, Mac OS X implementation
  */
 
-#include "lp-com.h"
-#include "lp-com-macosx.h"
+#include "DeviceIteratorMacOSX.h"
 #include <string.h>
 
 using namespace LibPhantom;
-
-CommunicationMacOSX::CommunicationMacOSX()
-{
-
-}
-
-CommunicationMacOSX::~CommunicationMacOSX()
-{
-
-}
-
-DeviceIterator *CommunicationMacOSX::getDevices()
-{
-  return new DeviceIteratorMacOSX();
-
-}
 
 DeviceIteratorMacOSX::DeviceIteratorMacOSX()
 {
@@ -126,38 +109,8 @@ FirewireDevice* DeviceIteratorMacOSX::next()
     result = (*iface)->Open(iface);
     if (result != KERN_SUCCESS)
     {
-      //printf("Could not be opened!\n");
       continue;
     }
     return new FirewireDeviceMacOSX(iface);
-
   }
 }
-
-FirewireDeviceMacOSX::FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface) :
-  interface(interface)
-{
-
-}
-
-FirewireDeviceMacOSX::~FirewireDeviceMacOSX()
-{
-  (*interface)->Close(interface);
-}
-
-void FirewireDeviceMacOSX::read(unsigned long address, char *buffer, unsigned int length)
-{
-  FWAddress full_addr;
-
-  full_addr.addressHi = address >> 32;
-  full_addr.addressLo = address & 0xffffffff;
-
-  (*interface)->Read(interface, (*interface)->GetDevice(interface), &full_addr, buffer, &length, false, 0);
-
-}
-
-void FirewireDeviceMacOSX::write(unsigned long address, char *buffer, unsigned int length)
-{
-
-}
-

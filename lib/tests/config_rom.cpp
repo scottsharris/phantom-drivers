@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <assert.h>
 
-#include "lp-com.h"
+#include "Communication.h"
 
 #define CSR_REGISTER_BASE  0xfffff0000000ULL
 #define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400

@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#include "phantom.h"
+#include "Phantom.h"
 
 #define MAX_PHANTOMS 16
 

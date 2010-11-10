@@ -15,10 +15,14 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Phantom Library: implementation of Phantom functionality
+ */
+
 #pragma once
 
 #include <stdint.h>
-#include "base-device.h"
+#include "BaseDevice.h"
 
 namespace LibPhantom
 {

@@ -4,15 +4,15 @@ FW_METHOD?=libraw1394
 CFLAGS?=-Wall -O0 -g
 CFLAGS+=-DUSE_$(FW_METHOD)
 
-FILES:= lp-com.cpp base-device.cpp phantom.cpp
+FILES:= BaseDevice.cpp Communication.cpp DeviceIterator.cpp FirewireDevice.cpp Phantom.cpp
 TEST_APPS:= config_rom phantom_find iso_channel
 
 ifeq ($(FW_METHOD),libraw1394)
-  FILES+=lp-com-libraw1394.cpp
+  FILES+=CommunicationLibraw1394.cpp DeviceIteratorLibraw1394.cpp FirewireDeviceLibraw1394.cpp
   LIBS+=-lraw1394
 else
 ifeq ($(FW_METHOD),macosx)
-  FILES+=lp-com-macosx.cpp
+  FILES+=CommunicationMacOSX.cpp DeviceIteratorMacOSX.cpp FirewireDeviceMacOSX.cpp
   LIBS+=-framework Corefoundation -framework IOKit
 else
   $(error Unknown value for FW_METHOD: $(FW_METHOD). Recognised values are libraw1394 (default) and macosx)

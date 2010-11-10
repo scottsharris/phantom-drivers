@@ -16,7 +16,7 @@
  */
 
 /*
- * Phantom Library Communications: generic header file for communication over firewire
+ * Phantom Library: generic header file for communication over firewire
  */
 
 #pragma once
@@ -54,34 +54,6 @@ namespace LibPhantom
 
     char *vendor;
 
-  };
-
-  class DeviceIterator;
-  class FirewireDevice;
-
-  /**
-   * Defines the communication methods to the firewire device (independent of the underlying library/driver)
-   *
-   * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class, 
-   * this function will return the correct underlying instance.
-   */
-  class Communication
-  {
-  public:
-    /**
-     * @return a new instance of the underlying communication method, which can be used to communicate with teh firewire devices
-     */
-    static Communication* createInstance();
-
-    Communication();
-    virtual ~Communication();
-    virtual DeviceIterator* getDevices()=0;
-  };
-
-  class DeviceIterator
-  {
-  public:
-    virtual FirewireDevice* next()=0;
   };
 
   class FirewireDevice

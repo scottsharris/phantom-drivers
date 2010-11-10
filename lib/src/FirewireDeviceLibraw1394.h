@@ -16,74 +16,18 @@
  */
 
 /*
- * Phantom Library Communications: FireWire communication driver for libraw1394
+ * Phantom Library: FireWire communication driver for libraw1394
  */
 
 #pragma once
 
-#include <sys/types.h>
+#include <stdint.h>
 #include "libraw1394/raw1394.h"
 
-#include "lp-com.h"
+#include "FirewireDevice.h"
 
 namespace LibPhantom
 {
-  class DeviceIteratorLibraw1394;
-  class FirewireDeviceLibraw1394;
-
-  /**
-   * Defines the communication methods to the firewire device (independent of the underlying library/driver)
-   *
-   * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class,
-   * this function will return the correct underlying instance.
-   */
-  class CommunicationLibraw1394 : public Communication
-  {
-  public:
-    CommunicationLibraw1394();
-    ~CommunicationLibraw1394();
-    DeviceIterator *getDevices();
-  };
-
-  class DeviceIteratorLibraw1394 : public DeviceIterator
-  {
-  public:
-    //TODO: friend??
-    DeviceIteratorLibraw1394();
-    ~DeviceIteratorLibraw1394();
-  public:
-    FirewireDevice* next();
-  protected:
-    /**
-     * Current port of this iterator
-     */
-    int port;
-
-    /**
-     * Current node of this iterator
-     */
-    int node;
-
-    /**
-     * Amount of available ports
-     */
-    static int ports;
-
-    /**
-     * Number of nodes available on current port
-     */
-    int nodes;
-
-    /**
-     * Libraw1394 handle which is connected to the current port
-     */
-    raw1394_handle *handle;
-
-    /**
-     * @return the number of available ports (cached)
-     */
-    int getPorts();
-  };
 
   class FirewireDeviceLibraw1394 : public FirewireDevice
   {

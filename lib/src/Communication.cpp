@@ -15,33 +15,38 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+/*
+ * Phantom Library: Generic implementation of communication functionalities
+ */
 
-#include <stdint.h>
-#include "lp-com.h"
+#include <stdlib.h>
+#include "Communication.h"
 
-namespace LibPhantom
+// Depending on which FW_METHOD is selected, add header file for static implementations
+#ifdef USE_libraw1394
+#include "CommunicationLibraw1394.h"
+#endif
+#ifdef USE_macosx
+#include "CommunicationMacOSX.h"
+#endif
+
+using namespace LibPhantom;
+
+Communication::Communication()
 {
-  class BaseDevice
-  {
-  public:
-    /**
-     * Reference to the FirewireDevice is consumed (i.e. the object is deleted
-     * upon destruction of the BaseDevice
-     */
-    BaseDevice(FirewireDevice *fw);
-    virtual ~BaseDevice();
+}
 
-    /**
-     * @return the device serial/unique number directly from device
-     */
-    virtual uint32_t readDeviceSerial() = 0;
+Communication::~Communication()
+{
+}
 
-  protected:
-    /**
-     * Communication handle for device
-     */
-    FirewireDevice *firewireDevice;
-
-  };
+Communication* Communication::createInstance()
+{
+#ifdef USE_libraw1394
+  return new CommunicationLibraw1394;
+#endif
+#ifdef USE_macosx
+  return new CommunicationMacOSX;
+#endif
+  return NULL;
 }

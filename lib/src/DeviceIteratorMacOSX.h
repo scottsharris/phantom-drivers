@@ -15,17 +15,34 @@
  * along with phantom-drivers.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "base-device.h"
+/*
+ * Phantom Library: iterator to iterate over FirewireDevices, Mac OS X implementation
+ */
 
-using namespace LibPhantom;
+#pragma once
 
-BaseDevice::BaseDevice(FirewireDevice *fw) :
-  firewireDevice(fw)
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/IOCFPlugIn.h>
+#include <IOKit/firewire/IOFireWireLib.h>
+#include <IOKit/firewire/IOFireWireLibIsoch.h>
+
+#include "DeviceIterator.h"
+#include "FirewireDevice.h"
+
+namespace LibPhantom
 {
-}
+  class DeviceIteratorMacOSX : public DeviceIterator
+  {
+  public:
+    //TODO: friend??
+    DeviceIteratorMacOSX();
+  public:
+    FirewireDevice* next();
+  private:
+    io_iterator_t deviceIterator;
+    io_iterator_t unitIterator;
 
-BaseDevice::~BaseDevice()
-{
-  delete firewireDevice;
+  };
 }
 

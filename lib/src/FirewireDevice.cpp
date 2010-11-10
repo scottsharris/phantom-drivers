@@ -16,23 +16,20 @@
  */
 
 /*
- * Phantom Library Communications: Generic implementation of communication functionalities
+ * Phantom Library: Generic implementation of communication functionalities
  */
 
 #include <string.h>
 #include <stdlib.h>
-
 #include <netinet/in.h>
 
-#include "lp-com.h"
+#include "FirewireDevice.h"
 
 // Depending on which FW_METHOD is selected, add header file for static implementations
 #ifdef USE_libraw1394
-#include "lp-com-libraw1394.h"
 #include "libraw1394/csr.h"
 #endif
 #ifdef USE_macosx
-#include "lp-com-macosx.h"
 #define CSR_REGISTER_BASE  0xfffff0000000ULL
 #define CSR_CONFIG_ROM 0x400
 #endif
@@ -40,25 +37,6 @@
 #define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + CSR_CONFIG_ROM
 
 using namespace LibPhantom;
-
-Communication::Communication()
-{
-}
-
-Communication::~Communication()
-{
-}
-
-Communication* Communication::createInstance()
-{
-#ifdef USE_libraw1394
-  return new CommunicationLibraw1394;
-#endif
-#ifdef USE_macosx
-  return new CommunicationMacOSX;
-#endif
-  return NULL;
-}
 
 FirewireDevice::FirewireDevice() :
   configRomRead(false), configRomValid(false)

@@ -16,7 +16,7 @@
  */
 
 /*
- * Phantom Library Communications: FireWire communication driver for Mac OS X
+ * Phantom Library: FireWire communication driver for Mac OS X
  */
 
 #pragma once
@@ -27,39 +27,10 @@
 #include <IOKit/firewire/IOFireWireLib.h>
 #include <IOKit/firewire/IOFireWireLibIsoch.h>
 
+#include "FirewireDeviceMacOSX.h"
+
 namespace LibPhantom
 {
-  class DeviceIteratorMacOSX;
-  class FirewireDeviceMacOSX;
-
-  /**
-   * Defines the communication methods to the firewire device (independent of the underlying library/driver)
-   *
-   * Do not create an instance of this class directly, instead use createInstance() to create a new instance of this class,
-   * this function will return the correct underlying instance.
-   */
-  class CommunicationMacOSX : public Communication
-  {
-  public:
-    CommunicationMacOSX();
-    ~CommunicationMacOSX();
-    DeviceIterator *getDevices();
-
-  };
-
-  class DeviceIteratorMacOSX : public DeviceIterator
-  {
-  public:
-    //TODO: friend??
-    DeviceIteratorMacOSX();
-  public:
-    FirewireDevice* next();
-  private:
-    io_iterator_t deviceIterator;
-    io_iterator_t unitIterator;
-
-  };
-
   class FirewireDeviceMacOSX : public FirewireDevice
   {
   public:

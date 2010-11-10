@@ -16,7 +16,7 @@
  */
 
 /*
- * Phantom Library Communications: FireWire communication driver for libraw1394
+ * Phantom Library: FireWire communication driver for libraw1394
  */
 
 #include <stdio.h>      // sprintf
@@ -26,7 +26,7 @@
 #include <netinet/in.h> // ntohl
 #include "libraw1394/csr.h"
 
-#include "lp-com-libraw1394.h"
+#include "FirewireDeviceLibraw1394.h"
 
 #define CHANNELS_AVAILABLE_ADDR    CSR_REGISTER_BASE + CSR_CHANNELS_AVAILABLE_HI
 
@@ -34,89 +34,6 @@
 #define CHANNEL_IS_FREE(channels, channel) (channels & (1L<<(63 - channel)))
 
 using namespace LibPhantom;
-
-CommunicationLibraw1394::CommunicationLibraw1394()
-{
-}
-
-CommunicationLibraw1394::~CommunicationLibraw1394()
-{
-}
-
-DeviceIterator *CommunicationLibraw1394::getDevices()
-{
-  return new DeviceIteratorLibraw1394();
-}
-
-// Number of ports is not available yet
-// TODO On bus-reset set ports back to -1
-int DeviceIteratorLibraw1394::ports = -1;
-
-DeviceIteratorLibraw1394::DeviceIteratorLibraw1394() :
-  port(0), node(0)
-{
-  if (getPorts() == 0)
-  {
-    nodes = 0;
-    handle = 0;
-  }
-  else
-  {
-    handle = raw1394_new_handle_on_port(0);
-    nodes = raw1394_get_nodecount(handle);
-  }
-}
-
-DeviceIteratorLibraw1394::~DeviceIteratorLibraw1394()
-{
-  if (handle)
-  {
-    raw1394_destroy_handle( handle);
-  }
-}
-
-FirewireDevice* DeviceIteratorLibraw1394::next()
-{
-  for (;;)
-  {
-    if (node >= nodes)
-    {
-      port++;
-      if (port >= getPorts())
-      {
-        return NULL;
-      }
-      raw1394_destroy_handle( handle);
-      handle = raw1394_new_handle_on_port(port);
-      nodes = raw1394_get_nodecount(handle);
-      node = 0;
-    }
-
-    if (!FirewireDeviceLibraw1394::deviceIsOpen(port, node))
-    {
-      FirewireDevice *device = new FirewireDeviceLibraw1394(port, node);
-      node++;
-      return device;
-    }
-    node++;
-  }
-}
-
-int DeviceIteratorLibraw1394::getPorts()
-{
-  if (ports == -1)
-  {
-    raw1394handle_t h = raw1394_new_handle();
-    if (h == 0)
-    {
-      // TODO Throw error
-    }
-    // Cache value, since we assume it will not change
-    ports = raw1394_get_port_info(h, 0, 0);
-    raw1394_destroy_handle(h);
-  }
-  return ports;
-}
 
 unsigned int FirewireDeviceLibraw1394::number_of_open_devices = 0;
 unsigned int FirewireDeviceLibraw1394::max_open_devices = 2;

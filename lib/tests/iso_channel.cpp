@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-#include "lp-com.h"
+#include "Communication.h"
 
 int main()
 {
