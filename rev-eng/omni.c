@@ -120,7 +120,7 @@ struct data_read {
     union gimbal_u gimbal_inv; // seems to be the inverse of gimbal
     short unknown14; // always 0x5746
     short unknown15;
-    quadlet_t count0; // msg nr?? since this value is increawed by one every time a messege is received (even when app is not running)
+    quadlet_t count0; // msg nr?? since this value is increased by one every time a message is received (even when app is not running)
     short unknown18;
     short unknown19;
     short count1; // Seems to be counting, slower than count0 (half the speed?)
@@ -323,7 +323,7 @@ int initialise_device(unsigned int device, int full_init)
     // Create configuration handle
     devices[device].config_handle = raw1394_new_handle_on_port(port);
 
-    // Only add 1 handle to bus reset event, sicne the other (xmit) handle is updated at teh same time!
+    // Only add 1 handle to bus reset event, since the other (xmit) handle is updated at the same time!
     raw1394_set_bus_reset_handler(devices[device].recv_handle, &busreset_handler);
 
     // File handles can be used to determine whether data is ready?
@@ -393,7 +393,7 @@ int initialise_device(unsigned int device, int full_init)
     return 1;
   }
 
-  // TODO Whithout this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
+  // TODO Without this raw1394_write(), two PHANTOM devices seem to work...?! -> what is it doing and what should be changed to be able to enable this line??
   // It seems that it has something to do with timing: when this is enabled (with two devices) the data is *not* received in a steady flow (until it takes too long and the select() quits the application)
   //quadlet_t bufq = 0xf80f0000; raw1394_write(config_handle, node, 0x20010, 4, &bufq);
 
@@ -453,7 +453,7 @@ int initialise_device(unsigned int device, int full_init)
   }
 
   // Start isochronous receiving
-  raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, devices[device].recv_channel, -1, 1);
+  raw1394_iso_recv_init(devices[device].recv_handle, recv_handler, 1000, 64, devices[device].recv_channel, RAW1394_DMA_DEFAULT, 1);
   raw1394_iso_recv_start(devices[device].recv_handle, -1, -1, 0);
 
   // Start isochronous transmitting
