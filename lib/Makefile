@@ -4,7 +4,7 @@ FW_METHOD?=libraw1394
 CFLAGS?=-Wall -O0 -g
 CFLAGS+=-DUSE_$(FW_METHOD)
 
-FILES:= BaseDevice.cpp Communication.cpp DeviceIterator.cpp FirewireDevice.cpp Phantom.cpp
+FILES:= BaseDevice.cpp Communication.cpp DeviceIterator.cpp FirewireDevice.cpp Phantom.cpp PhantomIsoChannel.cpp
 TEST_APPS:= config_rom phantom_find iso_channel
 
 ifeq ($(FW_METHOD),libraw1394)

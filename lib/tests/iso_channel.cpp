@@ -23,6 +23,7 @@
 
 #include "Communication.h"
 #include "DeviceIterator.h"
+#include "Phantom.h"
 
 int main()
 {
@@ -30,7 +31,7 @@ int main()
 
   try
   {
-    // These test assumes that findChannel finds the first free channel available
+    // These tests assume that findChannel finds the first free channel available
     // if it just find any free channel available the test might not pass
 
     DeviceIterator *it = DeviceIterator::createInstance();
@@ -69,6 +70,24 @@ int main()
       return 1;
     }
     printf("Found next free channel: %d\n", channel3);
+
+    // Delete dev to be able to find it as a Phantom device if only one is connected (and it would be claimed by dev)
+    delete dev;
+
+    // Now enable isochronous communication for a moment
+    Phantom *p = Phantom::findPhantom();
+    if(p == 0)
+    {
+      printf("Error: could not find a Phantom...\n");
+      return 1;
+    }
+
+    p->startPhantom();
+    printf("Successfully started isochronous communication with a Phantom\n");
+    p->stopPhantom();
+    printf("Stopped isochronous communication\n");
+
+    delete p;
   }
   catch (char const* str)
   {

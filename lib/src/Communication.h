@@ -46,6 +46,9 @@ namespace LibPhantom
     virtual void read(u_int64_t address, char *buffer, unsigned int length)=0;
     virtual void write(u_int64_t address, char *buffer, unsigned int length)=0;
 
+    virtual void startRecvIsoTransfer(unsigned int channel)=0;
+    virtual void startXmitIsoTransfer(unsigned int channel)=0;
+    virtual void stopIsoTransfer()=0;
   protected:
     Communication();
   };

@@ -26,6 +26,8 @@
 
 namespace LibPhantom
 {
+  class PhantomIsoChannel;
+
   class Phantom : public BaseDevice
   {
   public:
@@ -67,12 +69,12 @@ namespace LibPhantom
     /**
      * Transmit isochronous channel
      */
-    unsigned int xmit_channel;
+    PhantomIsoChannel* xmit_channel;
 
     /**
      * Receive isochronous channel
      */
-    unsigned int recv_channel;
+    PhantomIsoChannel* recv_channel;
 
     /**
      * Do no use constructor directly, but use findPhantom() functionalities.

@@ -36,7 +36,7 @@ CommunicationLibraw1394::CommunicationLibraw1394(unsigned int port, nodeid_t nod
 
 CommunicationLibraw1394::~CommunicationLibraw1394()
 {
-  raw1394_destroy_handle(handle);
+  raw1394_destroy_handle( handle);
 }
 
 void CommunicationLibraw1394::read(u_int64_t address, char *buffer, unsigned int length)
@@ -77,4 +77,23 @@ void CommunicationLibraw1394::write(nodeid_t node, u_int64_t address, char *buff
       throw buffer;
     }
   }
+}
+
+void CommunicationLibraw1394::startRecvIsoTransfer(unsigned int channel)
+{
+  // TODO Implement callback handler
+  raw1394_iso_recv_init(handle, 0 /*recv_handler*/, 1000, 64, channel, RAW1394_DMA_DEFAULT, 1);
+  raw1394_iso_recv_start(handle, -1, -1, 0);
+}
+
+void CommunicationLibraw1394::startXmitIsoTransfer(unsigned int channel)
+{
+  // TODO Implement callback handler
+  raw1394_iso_xmit_init(handle, 0 /*xmit_handler*/, 1000, 64, channel, RAW1394_ISO_SPEED_100, 1);
+  raw1394_iso_xmit_start(handle, -1, -1);
+}
+
+void CommunicationLibraw1394::stopIsoTransfer()
+{
+  raw1394_iso_shutdown( handle);
 }

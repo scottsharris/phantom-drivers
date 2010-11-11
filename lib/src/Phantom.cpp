@@ -21,6 +21,7 @@
 
 #include "DeviceIterator.h"
 #include "Phantom.h"
+#include "PhantomIsoChannel.h"
 
 using namespace LibPhantom;
 
@@ -90,14 +91,31 @@ void Phantom::startPhantom()
 {
   if (started)
   {
+    // TODO Create some library exception and throw that one
     throw "This phantom device is already started";
   }
   started = true;
 
-  xmit_channel = firewireDevice->getFreeChannel();
-  firewireDevice->claimChannel(xmit_channel);
-  recv_channel = firewireDevice->getFreeChannel();
-  firewireDevice->claimChannel(recv_channel);
+  try
+  {
+    recv_channel = new PhantomIsoChannel(firewireDevice, true);
+    try
+    {
+      xmit_channel = new PhantomIsoChannel(firewireDevice, false);
+    }
+    catch (...)
+    {
+      // Failed to get both channels, free recv_channel
+      delete recv_channel;
+      throw;
+    }
+  }
+  catch (...)
+  {
+    // Failed to start isochronous communication with phantom
+    started = false;
+    throw;
+  }
 }
 
 void Phantom::stopPhantom()
@@ -108,6 +126,6 @@ void Phantom::stopPhantom()
   }
   started = false;
 
-  firewireDevice->releaseChannel(xmit_channel);
-  firewireDevice->releaseChannel(recv_channel);
+  delete recv_channel;
+  delete xmit_channel;
 }

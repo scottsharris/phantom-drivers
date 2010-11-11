@@ -44,6 +44,10 @@ namespace LibPhantom
 
     virtual void write(u_int64_t address, char *buffer, unsigned int length);
     void write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
+
+    virtual void startRecvIsoTransfer(unsigned int channel);
+    virtual void startXmitIsoTransfer(unsigned int channel);
+    virtual void stopIsoTransfer();
   protected:
 
     nodeid_t node;
