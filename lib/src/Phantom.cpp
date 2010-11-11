@@ -116,6 +116,9 @@ void Phantom::startPhantom()
     started = false;
     throw;
   }
+
+  recv_channel->start();
+  xmit_channel->start();
 }
 
 void Phantom::stopPhantom()
@@ -125,7 +128,15 @@ void Phantom::stopPhantom()
     return;
   }
   started = false;
+  recv_channel->stop();
+  xmit_channel->stop();
 
   delete recv_channel;
   delete xmit_channel;
+}
+
+void Phantom::isoIterate()
+{
+  recv_channel->iterate();
+  xmit_channel->iterate();
 }

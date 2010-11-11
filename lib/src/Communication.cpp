@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include "Communication.h"
+#include "PhantomIsoChannel.h"
 
 // Depending on which FW_METHOD is selected, add header file for static implementations
 #ifdef USE_libraw1394
@@ -53,4 +54,24 @@ Communication* Communication::createInstance(FirewireDevice *firewireDevice)
   return new CommunicationMacOSX(device->getInterface());
 #endif
   throw "Unknown FW_METHOD used";
+}
+
+void Communication::startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel)
+{
+  this->iso_channel = iso_channel;
+}
+
+void Communication::startXmitIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel)
+{
+  this->iso_channel = iso_channel;
+}
+
+void Communication::callbackRecvHandler(unsigned char *data, unsigned int len)
+{
+  iso_channel->receivedData(data, len);
+}
+
+void Communication::callbackXmitHandler(unsigned char *data, unsigned int *len)
+{
+  iso_channel->transmitData(data, len);
 }

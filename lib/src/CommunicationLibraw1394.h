@@ -45,13 +45,20 @@ namespace LibPhantom
     virtual void write(u_int64_t address, char *buffer, unsigned int length);
     void write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length);
 
-    virtual void startRecvIsoTransfer(unsigned int channel);
-    virtual void startXmitIsoTransfer(unsigned int channel);
+    virtual void startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
+    virtual void startXmitIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
     virtual void stopIsoTransfer();
+    virtual void doIterate();
   protected:
 
     nodeid_t node;
     raw1394_handle *handle;
+
+  private:
+    static enum raw1394_iso_disposition xmit_handler(raw1394handle_t handle, unsigned char *data, unsigned int *len,
+        unsigned char *tag, unsigned char *sy, int cycle, unsigned int dropped);
+    static enum raw1394_iso_disposition recv_handler(raw1394handle_t handle, unsigned char *data, unsigned int len,
+        unsigned char channel, unsigned char tag, unsigned char sy, unsigned int cycle, unsigned int dropped);
   };
 }
 

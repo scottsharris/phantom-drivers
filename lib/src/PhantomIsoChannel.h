@@ -33,7 +33,7 @@ namespace LibPhantom
     ~PhantomIsoChannel();
 
     /**
-     * (Re)starts the isochrnous communication
+     * (Re)starts the isochronous communication
      */
     void start();
 
@@ -41,6 +41,14 @@ namespace LibPhantom
      * Stops the isochronous communication
      */
     void stop();
+
+    /**
+     * Do an iteration for the current channel (ie give it time to update)
+     */
+    void iterate();
+
+    void receivedData(unsigned char *data, unsigned int len);
+    void transmitData(unsigned char *data, unsigned int *len);
   protected:
     /**
      * Phantom device to which the isochronous channels belongs to

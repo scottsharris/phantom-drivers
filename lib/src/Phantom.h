@@ -60,6 +60,11 @@ namespace LibPhantom
      */
     void stopPhantom();
 
+    /**
+     * Do an isochronous iteration (ie see whether we need to transmit or receive data)
+     */
+    void isoIterate();
+
   protected:
     /**
      * When true, isochronous communication is enabled (ie the device is started)

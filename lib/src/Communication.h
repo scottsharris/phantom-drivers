@@ -23,10 +23,10 @@
 
 #include <sys/types.h>
 
-
 namespace LibPhantom
 {
   class FirewireDevice;
+  class PhantomIsoChannel;
 
   /**
    * Defines the communication methods to the firewire device (independent of the underlying library/driver)
@@ -46,11 +46,19 @@ namespace LibPhantom
     virtual void read(u_int64_t address, char *buffer, unsigned int length)=0;
     virtual void write(u_int64_t address, char *buffer, unsigned int length)=0;
 
-    virtual void startRecvIsoTransfer(unsigned int channel)=0;
-    virtual void startXmitIsoTransfer(unsigned int channel)=0;
+    virtual void startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
+    virtual void startXmitIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
     virtual void stopIsoTransfer()=0;
+    virtual void doIterate()=0;
   protected:
+    /**
+     * Isochronous channel object
+     */
+    PhantomIsoChannel *iso_channel;
+
     Communication();
+    void callbackRecvHandler(unsigned char *data, unsigned int len);
+    void callbackXmitHandler(unsigned char *data, unsigned int *len);
   };
 }
 

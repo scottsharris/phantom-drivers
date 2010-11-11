@@ -84,6 +84,8 @@ int main()
 
     p->startPhantom();
     printf("Successfully started isochronous communication with a Phantom\n");
+    // Do the isochronous iteration (should print some data on the screen atm)
+    p->isoIterate();
     p->stopPhantom();
     printf("Stopped isochronous communication\n");
 

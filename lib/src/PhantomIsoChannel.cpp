@@ -25,7 +25,7 @@
 
 #include "Communication.h"
 #include "FirewireDevice.h"
-#include "PhantomAddr.h"
+#include "PhantomSpec.h"
 
 using namespace LibPhantom;
 
@@ -41,6 +41,8 @@ PhantomIsoChannel::PhantomIsoChannel(FirewireDevice *firewireDevice, bool receiv
 
 PhantomIsoChannel::~PhantomIsoChannel()
 {
+  //TODO Should we check whether start() was called?
+  stop();
   firewireDevice->releaseChannel(channel);
   delete com;
   delete com_config;
@@ -97,7 +99,7 @@ void PhantomIsoChannel::start()
     throw buf;
   }
 
-  // Tell Phanton to actual start the isochronous transfer
+  // Tell Phantom to actual start the isochronous transfer
   com_config->read(ADDR_CONTROL, (char *) &c, 1);
   if (!(c & ADDR_CONTROL_enable_iso))
   {
@@ -108,11 +110,11 @@ void PhantomIsoChannel::start()
 
   if (receiving)
   {
-    com->startRecvIsoTransfer(channel);
+    com->startRecvIsoTransfer(channel, this);
   }
   else
   {
-    com->startXmitIsoTransfer(channel);
+    com->startXmitIsoTransfer(channel, this);
   }
 }
 
@@ -150,4 +152,48 @@ void PhantomIsoChannel::stop()
   }
 
   com->stopIsoTransfer();
+}
+
+void PhantomIsoChannel::iterate()
+{
+  //TODO Check if this is really required (and thus is non-blocking)
+  // Use select() for this, for an example see rev-eng/omni.c
+  com->doIterate();
+}
+
+void PhantomIsoChannel::receivedData(unsigned char *data, unsigned int len)
+{
+  //TODO Call application callback to do something with the data
+  PhantomDataRead *d = (PhantomDataRead *) data;
+  printf("Encoder      X %6hd Y %6hd Z %6hd\n", d->encoder_x, d->encoder_y, d->encoder_z);
+  printf("Gimbal       X %6hd Y %6hd Z %6hd\n", d->gimbal.x, d->gimbal.y, d->gimbal.z);
+  printf("Gimbal (inv) X %6hu Y %6hu Z %6hu\n", d->gimbal_inv.x, d->gimbal_inv.y, d->gimbal_inv.z);
+  if(d->status.button1 == 0)
+    printf("Button1 pressed\n");
+  else
+    printf("\n");
+  if(d->status.button2 == 0)
+    printf("Button2 pressed\n");
+  else
+    printf("\n");
+  if(d->status.docked == 0)
+    printf("Gimbal docked\n");
+  else
+    printf("\n");
+}
+
+void PhantomIsoChannel::transmitData(unsigned char *data, unsigned int *len)
+{
+  //TODO Call application callback to get new data to send to Phantom device
+
+  // No forces are enabled
+  PhantomDataWrite *d = (PhantomDataWrite *) data;
+  d->force_x     = 0x7ff;
+  d->force_y     = 0x7ff;
+  d->force_z     = 0x7ff;
+  d->status.bits = 0x53c0;
+  d->unused1     = 0;
+  d->unused2     = 0;
+
+  *len = sizeof(struct PhantomDataWrite);
 }

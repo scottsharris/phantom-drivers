@@ -32,6 +32,8 @@ CommunicationLibraw1394::CommunicationLibraw1394(unsigned int port, nodeid_t nod
   node(node)
 {
   handle = raw1394_new_handle_on_port(port);
+  // Add pointer to ourself to the handle, so the callback functions can be used more easily
+  raw1394_set_userdata(handle, this);
 }
 
 CommunicationLibraw1394::~CommunicationLibraw1394()
@@ -66,7 +68,7 @@ void CommunicationLibraw1394::write(u_int64_t address, char *buffer, unsigned in
 
 void CommunicationLibraw1394::write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
 {
-  if (raw1394_write(handle, node, address, length, (quadlet_t *) buffer))
+  if (raw1394_write(handle, node | 0xffc0, address, length, (quadlet_t *) buffer))
   {
     if (errno != EAGAIN)
     {
@@ -79,21 +81,55 @@ void CommunicationLibraw1394::write(nodeid_t node, u_int64_t address, char *buff
   }
 }
 
-void CommunicationLibraw1394::startRecvIsoTransfer(unsigned int channel)
+void CommunicationLibraw1394::startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel)
 {
-  // TODO Implement callback handler
-  raw1394_iso_recv_init(handle, 0 /*recv_handler*/, 1000, 64, channel, RAW1394_DMA_DEFAULT, 1);
+  Communication::startRecvIsoTransfer(channel, iso_channel);
+
+  raw1394_iso_recv_init(handle, &recv_handler, 1000, 64, channel, RAW1394_DMA_DEFAULT, 1);
   raw1394_iso_recv_start(handle, -1, -1, 0);
 }
 
-void CommunicationLibraw1394::startXmitIsoTransfer(unsigned int channel)
+void CommunicationLibraw1394::startXmitIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel)
 {
-  // TODO Implement callback handler
-  raw1394_iso_xmit_init(handle, 0 /*xmit_handler*/, 1000, 64, channel, RAW1394_ISO_SPEED_100, 1);
+  Communication::startXmitIsoTransfer(channel, iso_channel);
+
+  raw1394_iso_xmit_init(handle, &xmit_handler, 1000, 64, channel, RAW1394_ISO_SPEED_100, 1);
   raw1394_iso_xmit_start(handle, -1, -1);
 }
 
 void CommunicationLibraw1394::stopIsoTransfer()
 {
   raw1394_iso_shutdown( handle);
+}
+
+void CommunicationLibraw1394::doIterate()
+{
+  if (raw1394_loop_iterate(handle))
+  {
+    if (errno != 0 && errno != EAGAIN)
+    {
+      // TODO Create some library exception and throw that one
+      throw "Something went wrong in an iterate loop...";
+    }
+  }
+}
+
+enum raw1394_iso_disposition CommunicationLibraw1394::recv_handler(raw1394handle_t handle, unsigned char *data,
+    unsigned int len, unsigned char channel, unsigned char tag, unsigned char sy, unsigned int cycle,
+    unsigned int dropped)
+{
+  CommunicationLibraw1394 *com = (CommunicationLibraw1394 *) raw1394_get_userdata(handle);
+  com->callbackRecvHandler(data, len);
+  return RAW1394_ISO_OK;
+}
+
+enum raw1394_iso_disposition CommunicationLibraw1394::xmit_handler(raw1394handle_t handle, unsigned char *data,
+    unsigned int *len, unsigned char *tag, unsigned char *sy, int cycle, unsigned int dropped)
+{
+  CommunicationLibraw1394 *com = (CommunicationLibraw1394 *) raw1394_get_userdata(handle);
+  com->callbackXmitHandler(data, len);
+  *tag = 0;
+  *sy = 0;
+
+  return RAW1394_ISO_OK;
 }
