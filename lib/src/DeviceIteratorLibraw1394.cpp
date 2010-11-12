@@ -69,7 +69,7 @@ FirewireDevice* DeviceIteratorLibraw1394::next()
       node = 0;
     }
 
-    if (!FirewireDeviceLibraw1394::deviceIsOpen(port, node))
+    if (!FirewireDeviceLibraw1394::deviceIsOpen(port, node | 0xffc0))
     {
       // Firewire nodes start at 0xffc0 and counts upwards (see specs... something about local bus address)
       FirewireDevice *device = new FirewireDeviceLibraw1394(port, node | 0xffc0);
