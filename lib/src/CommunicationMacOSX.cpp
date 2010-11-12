@@ -34,7 +34,7 @@ CommunicationMacOSX::~CommunicationMacOSX()
 
 }
 
-void CommunicationMacOSX::read(unsigned long address, char *buffer, unsigned int length)
+void CommunicationMacOSX::read(u_int64_t address, char *buffer, unsigned int length)
 {
   FWAddress full_addr;
 
@@ -45,7 +45,15 @@ void CommunicationMacOSX::read(unsigned long address, char *buffer, unsigned int
 
 }
 
-void CommunicationMacOSX::write(unsigned long address, char *buffer, unsigned int length)
+void CommunicationMacOSX::write(u_int64_t address, char *buffer, unsigned int length)
 {
+	//TODO: implement
+	throw "Not implemented";
+}
 
+void CommunicationMacOSX::stopIsoTransfer() {
+	throw "Not implemented";
+}
+void CommunicationMacOSX::doIterate(){
+	throw "Not implemented";
 }

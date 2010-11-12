@@ -22,6 +22,8 @@
 #pragma once
 
 #include <sys/types.h>
+#include "Communication.h"
+#include "FirewireDevice.h"
 
 namespace LibPhantom
 {
@@ -63,6 +65,12 @@ namespace LibPhantom
   public:
     FirewireDevice();
     virtual ~FirewireDevice();
+    /** Create platform-specific communication object for this device
+     *
+     *
+     */
+
+    virtual Communication * createCommunication() = 0;
 
     /**
      * @return the first free isochronous channel available

@@ -35,7 +35,7 @@ namespace LibPhantom
     //TODO: friend??
     FirewireDeviceLibraw1394(u_int32_t port, nodeid_t node);
     ~FirewireDeviceLibraw1394();
-
+    Communication * createCommunication();
     unsigned int getFreeChannel();
     void claimChannel(unsigned int channel);
     void releaseChannel(unsigned int channel);

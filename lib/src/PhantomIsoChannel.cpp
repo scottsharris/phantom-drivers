@@ -32,8 +32,8 @@ using namespace LibPhantom;
 PhantomIsoChannel::PhantomIsoChannel(FirewireDevice *firewireDevice, bool receiving) :
   firewireDevice(firewireDevice), receiving(receiving)
 {
-  com = Communication::createInstance(firewireDevice);
-  com_config = Communication::createInstance(firewireDevice);
+  com = firewireDevice->createCommunication();
+  com_config = firewireDevice->createCommunication();
 
   channel = firewireDevice->getFreeChannel();
   firewireDevice->claimChannel(channel);

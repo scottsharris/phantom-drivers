@@ -23,6 +23,12 @@
 
 #include "DeviceIterator.h"
 
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/IOCFPlugIn.h>
+#include <IOKit/firewire/IOFireWireLib.h>
+#include <IOKit/firewire/IOFireWireLibIsoch.h>
+
 namespace LibPhantom
 {
   /**
@@ -39,7 +45,8 @@ namespace LibPhantom
 
     virtual void read(u_int64_t address, char *buffer, unsigned int length);
     virtual void write(u_int64_t address, char *buffer, unsigned int length);
-
+    virtual void stopIsoTransfer();
+    virtual void doIterate();
   protected:
     IOFireWireLibDeviceRef interface;
   };
