@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 
-
 #include "FirewireDevice.h"
 #include "Communication.h"
 
@@ -42,7 +41,7 @@ using namespace LibPhantom;
 
 FirewireDevice::FirewireDevice() :
   com(NULL), //this is set by the platform-specific constructor
-  configRomRead(false), configRomValid(false)
+      configRomRead(false), configRomValid(false)
 {
 
 }
@@ -162,7 +161,7 @@ void FirewireDevice::readConfigRom()
 
     configRom.guid_lo = quadlet;
 
-    /* The next quadlet contains the length of the root directory in 
+    /* The next quadlet contains the length of the root directory in
      * quadlets (32 bits).
      */
     addr += 4;
@@ -285,10 +284,10 @@ void FirewireDevice::readConfigRom()
 
 void FirewireDevice::read(u_int64_t address, char *buffer, unsigned int length)
 {
-	com->read(address, buffer, length);
+  com->read(address, buffer, length);
 }
 
 void FirewireDevice::write(u_int64_t address, char *buffer, unsigned int length)
 {
-	com->write(address, buffer, length);
+  com->write(address, buffer, length);
 }
