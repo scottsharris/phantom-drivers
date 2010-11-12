@@ -27,7 +27,7 @@
 #include <IOKit/firewire/IOFireWireLib.h>
 #include <IOKit/firewire/IOFireWireLibIsoch.h>
 
-#include "FirewireDeviceMacOSX.h"
+#include "FirewireDevice.h"
 
 namespace LibPhantom
 {
@@ -37,8 +37,11 @@ namespace LibPhantom
     //TODO: friend??
     FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface);
     ~FirewireDeviceMacOSX();
-    void read(unsigned long address, char *buffer, unsigned int length);
-    void write(unsigned long address, char *buffer, unsigned int length);
+    Communication * createCommunication();
+    unsigned int getFreeChannel();
+    void claimChannel(unsigned int channel);
+    void releaseChannel(unsigned int channel);
+
 
     IOFireWireLibDeviceRef getInterface();
 

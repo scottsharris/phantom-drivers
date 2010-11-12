@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 
+
 #include "FirewireDevice.h"
 #include "Communication.h"
 
@@ -40,14 +41,15 @@
 using namespace LibPhantom;
 
 FirewireDevice::FirewireDevice() :
+  com(NULL), //this is set by the platform-specific constructor
   configRomRead(false), configRomValid(false)
 {
-  com = Communication::createInstance(this);
+
 }
 
 FirewireDevice::~FirewireDevice()
 {
-  delete com;
+
 }
 
 unsigned int FirewireDevice::getVendorId()

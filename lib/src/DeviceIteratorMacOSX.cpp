@@ -20,6 +20,7 @@
  */
 
 #include "DeviceIteratorMacOSX.h"
+#include "FirewireDeviceMacOSX.h"
 #include <string.h>
 
 using namespace LibPhantom;

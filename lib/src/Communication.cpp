@@ -24,6 +24,7 @@
 #include "PhantomIsoChannel.h"
 
 // Depending on which FW_METHOD is selected, add header file for static implementations
+/*
 #ifdef USE_libraw1394
 #include "CommunicationLibraw1394.h"
 #include "FirewireDeviceLibraw1394.h"
@@ -32,6 +33,7 @@
 #include "CommunicationMacOSX.h"
 #include "FirewireDeviceMacOSX.h"
 #endif
+*/
 
 using namespace LibPhantom;
 
@@ -42,6 +44,10 @@ Communication::Communication()
 Communication::~Communication()
 {
 }
+
+/*
+ * Code moved to platform specific constructors
+ *
 
 Communication* Communication::createInstance(FirewireDevice *firewireDevice)
 {
@@ -55,6 +61,7 @@ Communication* Communication::createInstance(FirewireDevice *firewireDevice)
 #endif
   throw "Unknown FW_METHOD used";
 }
+*/
 
 void Communication::startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel)
 {
