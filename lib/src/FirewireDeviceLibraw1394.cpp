@@ -57,7 +57,7 @@ FirewireDeviceLibraw1394::FirewireDeviceLibraw1394(u_int32_t port, nodeid_t node
   // TODO throw error if failed
 
   // TODO on busreset the irm node needs to be updated!
-  irm_node = raw1394_get_irm_id(handle) - 0xffc0;
+  irm_node = raw1394_get_irm_id(handle);
 }
 
 FirewireDeviceLibraw1394::~FirewireDeviceLibraw1394()

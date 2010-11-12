@@ -20,7 +20,6 @@
  */
 
 #include <stdlib.h>     // NULL
-
 #include "DeviceIteratorLibraw1394.h"
 #include "FirewireDeviceLibraw1394.h"
 
@@ -72,7 +71,8 @@ FirewireDevice* DeviceIteratorLibraw1394::next()
 
     if (!FirewireDeviceLibraw1394::deviceIsOpen(port, node))
     {
-      FirewireDevice *device = new FirewireDeviceLibraw1394(port, node);
+      // Firewire nodes start at 0xffc0 and counts upwards (see specs... something about local bus address)
+      FirewireDevice *device = new FirewireDeviceLibraw1394(port, node | 0xffc0);
       node++;
       return device;
     }
