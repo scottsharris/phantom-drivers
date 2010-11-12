@@ -48,15 +48,24 @@ void CommunicationLibraw1394::read(u_int64_t address, char *buffer, unsigned int
 
 void CommunicationLibraw1394::read(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
 {
-  if (raw1394_read(handle, node, address, length, (quadlet_t *) buffer))
+  int pos = 0;
+  // The new Linux firewire stack does not allow reads from its host device with larger blocks than quadlets
+  while (pos < length)
   {
-    if (errno != EAGAIN)
+    if (raw1394_read(handle, node, address + pos, (length - pos >= 4 ? 4 : length - pos), (quadlet_t *) (buffer + pos)))
     {
-      // TODO Create some library exception and throw that one
-      char *buffer = new char[256];
-      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
-          errno));
-      throw buffer;
+      if (errno != EAGAIN)
+      {
+        // TODO Create some library exception and throw that one
+        char *buffer = new char[256];
+        sprintf(buffer, "Failed to read data at address 0x%lx from device %x: (%d) %s\n", address, node, errno,
+            strerror(errno));
+        throw buffer;
+      }
+    }
+    else
+    {
+      pos += 4;
     }
   }
 }
@@ -68,13 +77,15 @@ void CommunicationLibraw1394::write(u_int64_t address, char *buffer, unsigned in
 
 void CommunicationLibraw1394::write(nodeid_t node, u_int64_t address, char *buffer, unsigned int length)
 {
+  // Is it allowed to write more data than 1 quadlet with the new Linux firewire stack?
+  // If not, add same while-loop as implemented in the read() function
   if (raw1394_write(handle, node, address, length, (quadlet_t *) buffer))
   {
     if (errno != EAGAIN)
     {
       // TODO Create some library exception and throw that one
       char *buffer = new char[256];
-      sprintf(buffer, "Failed to read data at address 0x%lx from device %d: (%d) %s\n", address, node, errno, strerror(
+      sprintf(buffer, "Failed to read data at address 0x%lx from device %x: (%d) %s\n", address, node, errno, strerror(
           errno));
       throw buffer;
     }
