@@ -44,6 +44,8 @@ FirewireDeviceLibraw1394** FirewireDeviceLibraw1394::open_devices = (FirewireDev
 FirewireDeviceLibraw1394::FirewireDeviceLibraw1394(u_int32_t port, nodeid_t node) :
   port(port), node(node)
 {
+  com = createCommunication();
+
   if (number_of_open_devices == max_open_devices)
   {
     max_open_devices += 2;
@@ -72,6 +74,13 @@ FirewireDeviceLibraw1394::~FirewireDeviceLibraw1394()
     open_devices[i - 1] = open_devices[i];
 
   raw1394_destroy_handle( handle);
+  delete com;
+}
+
+
+
+Communication * FirewireDeviceLibraw1394::createCommunication() {
+	return new CommunicationLibraw1394(port,node);
 }
 
 bool FirewireDeviceLibraw1394::deviceIsOpen(u_int32_t port, nodeid_t node)

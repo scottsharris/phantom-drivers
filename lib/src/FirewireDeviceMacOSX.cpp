@@ -22,21 +22,42 @@
 #include <string.h>
 
 #include "FirewireDeviceMacOSX.h"
+#include "CommunicationMacOSX.h"
 
 using namespace LibPhantom;
 
 FirewireDeviceMacOSX::FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface) :
   interface(interface)
 {
-
+	com=createCommunication();
 }
+
 
 FirewireDeviceMacOSX::~FirewireDeviceMacOSX()
 {
-  (*interface)->Close(interface);
+	delete com;
+	(*interface)->Close(interface);
+
+}
+
+
+Communication * FirewireDeviceMacOSX::createCommunication() {
+	return new CommunicationMacOSX(interface);
 }
 
 IOFireWireLibDeviceRef FirewireDeviceMacOSX::getInterface()
 {
   return interface;
 }
+
+unsigned int FirewireDeviceMacOSX::getFreeChannel() {
+	throw "Not implemented";
+}
+
+void FirewireDeviceMacOSX::claimChannel(unsigned int channel) {
+	throw "Not implemented";
+}
+void FirewireDeviceMacOSX::releaseChannel(unsigned int channel) {
+	throw "Not implemented";
+}
+
