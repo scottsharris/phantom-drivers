@@ -51,7 +51,14 @@ namespace LibPhantom
     virtual void doIterate();
   protected:
 
+   /**
+    * Node to which this Communication object is communication with
+    */
     nodeid_t node;
+
+    /**
+     * Handle used for Communication with the node
+     */
     raw1394_handle *handle;
 
   private:
