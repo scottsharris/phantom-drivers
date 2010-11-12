@@ -1,0 +1,37 @@
+This project aims to create open source drivers for the SensAble PHANTOM haptic devices (http://www.sensable.com/). Currently the proprietary drivers are not stable enough and unusable for our experiments. 
+
+The aims are to fully implement drivers for the PHANTOM Omni device and: 
+ - prevent crashes of time (stability) 
+ - allow to control multiple devices connected to one host 
+ - eventually add other PHANTOM devices to the project
+   (which we do not have in our possession, so we can use help help from other developers!) 
+
+
+Currently the status of this project is very immature: by adding traces libraw1394, we managed to create an application which drives one PHANTOM Omni with static configuration (only works with certain settings, like the node id). Now we need to find out what the meaning of all written and read values are to create a more flexible library which allows controlling devices with other node ids and multiple devices at the same time. 
+
+If you feel like to help with this project please let us know! Any help is welcome.
+
+
+== Patching libraw1394 ==
+
+We provided a patch to patch libraw1394 (version 2.0.5) to add traces. With these traces the communication with a firewire devices can be followed (partly). For the PHANTOM Omni all information could be received and for other PHANTOM devices this patch covers the communication probably as well.
+
+To configure libraw type:
+  ./configure --prefix=/usr/
+
+(The --prefix installs the library in /usr/lib instead of /usr/local/lib which is the default)
+
+In order to run applications which use libraw1394, the raw1394 module needs to be running as well:
+  sudo modprobe raw1394
+
+
+== Creating a minimal test ==
+
+With the results of the traces a minimal test can be created. By exactly sending (and receiving?) the same data (and some additional fiddling) the PHANTOM device should work.
+The Makefile in the minimal-test directory contains a 'test' target. With this target the proprietary and the opensource applications are build and compared.
+The comparison results can be viewed in the file called comparison.diff. When this file is (almost) empty the device should work and return sensible data (device and gimbal angles and status information of the buttons).
+
+After the minimal test was created, the source was (is being) cleaned in the rev-eng (REVerse ENGineering) directory. With this version all configuration, status information and send and received data can be identified.
+While working on the rev-eng version it might be convenient to turn off tracing of libraw1394 (see libraw1394/src/trace.h file) since things should be working and the data structures are shown in the applciation already.
+
+The lib directory should contain working parts of the driver/library.
