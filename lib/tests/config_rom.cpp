@@ -26,9 +26,6 @@
 #include "Communication.h"
 #include "DeviceIterator.h"
 
-#define CSR_REGISTER_BASE  0xfffff0000000ULL
-#define CONFIG_ROM_ADDR    CSR_REGISTER_BASE + 0x400
-
 int main()
 {
   using namespace LibPhantom;
