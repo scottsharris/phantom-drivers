@@ -30,6 +30,9 @@ FirewireDeviceMacOSX::FirewireDeviceMacOSX(IOFireWireLibDeviceRef interface) :
   interface(interface)
 {
 	com=createCommunication();
+
+	//TODO: should this be in the Communication class?
+	(*interface)->AddIsochCallbackDispatcherToRunLoop(interface,CFRunLoopGetCurrent());
 }
 
 
@@ -50,14 +53,27 @@ IOFireWireLibDeviceRef FirewireDeviceMacOSX::getInterface()
   return interface;
 }
 
+//Hack
+long claimed=0;
+
 unsigned int FirewireDeviceMacOSX::getFreeChannel() {
-	throw "Not implemented";
+	int ch;
+	for(ch=0;ch<32;ch++) {
+		if (claimed & (1<<ch)) continue;
+		return ch;
+
+	}
+	throw "No free isochronous channels available";
+	throw "Not implemented getfreechannel";
 }
 
 void FirewireDeviceMacOSX::claimChannel(unsigned int channel) {
-	throw "Not implemented";
+	claimed|=(1<<channel);
+
+	//	throw "Not implemented claimchannel";
 }
 void FirewireDeviceMacOSX::releaseChannel(unsigned int channel) {
-	throw "Not implemented";
+	claimed&=~(1<<channel);
+	//	throw "Not implemented releasechannel";
 }
 
