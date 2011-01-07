@@ -57,6 +57,7 @@ namespace LibPhantom
     PhantomIsoChannel *iso_channel;
 
     Communication();
+  public: //TODO: protected!
     void callbackRecvHandler(unsigned char *data, unsigned int len);
     void callbackXmitHandler(unsigned char *data, unsigned int *len);
   };

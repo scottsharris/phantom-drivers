@@ -37,6 +37,7 @@ PhantomIsoChannel::PhantomIsoChannel(FirewireDevice *firewireDevice, bool receiv
 
   channel = firewireDevice->getFreeChannel();
   firewireDevice->claimChannel(channel);
+  printf("PhantomIsoChannel: com=%p\n",com);
 }
 
 PhantomIsoChannel::~PhantomIsoChannel()
@@ -51,6 +52,17 @@ PhantomIsoChannel::~PhantomIsoChannel()
 void PhantomIsoChannel::start()
 {
   unsigned char c;
+
+  //We start by creating the IsoTransfer since that gives us the channel #
+  //on Mac OS X
+  if (receiving)
+  {
+    com->startRecvIsoTransfer(channel, this);
+  }
+  else
+  {
+    com->startXmitIsoTransfer(channel, this);
+  }
 
   // Tell Phantom which isochronous channel is used for receiving/transmitting
   c = channel;
@@ -108,14 +120,7 @@ void PhantomIsoChannel::start()
     com_config->write(ADDR_CONTROL, (char *) &c, 1);
   }
 
-  if (receiving)
-  {
-    com->startRecvIsoTransfer(channel, this);
-  }
-  else
-  {
-    com->startXmitIsoTransfer(channel, this);
-  }
+
 }
 
 void PhantomIsoChannel::stop()
