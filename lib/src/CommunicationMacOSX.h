@@ -45,10 +45,20 @@ namespace LibPhantom
 
     virtual void read(u_int64_t address, char *buffer, unsigned int length);
     virtual void write(u_int64_t address, char *buffer, unsigned int length);
+
+    virtual void startRecvIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
+    virtual void startXmitIsoTransfer(unsigned int channel, PhantomIsoChannel *iso_channel);
+
     virtual void stopIsoTransfer();
     virtual void doIterate();
-  protected:
+  public: //TODO: protected!
     IOFireWireLibDeviceRef interface;
+    IOFireWireLibIsochChannelRef	mChannel ;
+
+    DCLCommandStruct*   dclProgram;
+    IOFireWireLibDCLCommandPoolRef dclPool;
+    vm_address_t buffer; //TODO: private!
+
   };
 }
 
