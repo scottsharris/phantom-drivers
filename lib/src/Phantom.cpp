@@ -101,7 +101,7 @@ void Phantom::startPhantom()
     recv_channel = new PhantomIsoChannel(firewireDevice, true);
     try
     {
-//      xmit_channel = new PhantomIsoChannel(firewireDevice, false);
+      xmit_channel = new PhantomIsoChannel(firewireDevice, false);
     }
     catch (...)
     {
@@ -118,7 +118,7 @@ void Phantom::startPhantom()
   }
 
   recv_channel->start();
-//  xmit_channel->start();
+  xmit_channel->start();
 }
 
 void Phantom::stopPhantom()
@@ -129,14 +129,15 @@ void Phantom::stopPhantom()
   }
   started = false;
   recv_channel->stop();
-//  xmit_channel->stop();
+  xmit_channel->stop();
 
   delete recv_channel;
-//  delete xmit_channel;
+  delete xmit_channel;
 }
 
 void Phantom::isoIterate()
 {
   recv_channel->iterate();
-//  xmit_channel->iterate();
+  xmit_channel->iterate();
 }
+
